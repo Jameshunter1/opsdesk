@@ -2,6 +2,7 @@
 
 OpsDesk is a **local-first** app: everything you enter lives in your browser, on your machine. This guide walks through every module, the keyboard shortcuts, and how to keep your data safe.
 
+- [Two modes: Simple and Pro](#two-modes-simple-and-pro)
 - [Getting around](#getting-around)
 - [Dashboard](#dashboard)
 - [Lab](#lab)
@@ -15,9 +16,20 @@ OpsDesk is a **local-first** app: everything you enter lives in your browser, on
 
 ---
 
+## Two modes: Simple and Pro
+
+On first run, OpsDesk asks what it should be for you:
+
+- **Simple** — plain everyday language. The sidebar reads *Home, To-dos, Money, Job hunt, Learning*. Money is recorded as **"I spent money," "I got paid,"** or **"I moved money"** — how much, on what, paid with, done. To-dos ask "What needs doing?" instead of showing ticket jargon, and the homelab module doesn't appear at all. You start with everyday accounts (Chequing, Credit card, Groceries…) and three worked examples you can delete.
+- **Pro** — the full IT-department experience: tickets with root causes, a double-entry ledger with a trial balance, the homelab tracker with its firewall matrix, and command drills. Starts loaded with a demo homelab to explore.
+
+**It's the same data underneath.** A simple-mode purchase is stored as a correct double-entry transaction, so nothing is lost switching between modes — change anytime in **Settings → Experience**, where you can also turn individual modules on or off (want Money and To-dos but no Job hunt? Untick it).
+
+![The simple money form](simple-money.png)
+
 ## Getting around
 
-The sidebar is the map: **Dashboard → Lab → Desk → Ledger → Pipeline → Study**, with Settings and the theme toggle at the bottom. The theme cycles System → Light → Dark.
+The sidebar is the map — in Pro mode **Dashboard → Lab → Desk → Ledger → Pipeline → Study**, in Simple mode **Home → To-dos → Money → Job hunt → Learning** — with Settings and the theme toggle at the bottom. The theme cycles System → Light → Dark. Modules you've turned off in Settings simply don't appear.
 
 **The fastest way to anything is the command palette.** Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (or <kbd>/</kbd>) and type. It searches every module at once — VM names, ticket text, KB lessons, transaction descriptions, companies, study topics, commands — and <kbd>Enter</kbd> jumps straight to the record. It also carries quick actions: type "new" to see *New ticket*, *New transaction*, *New VM*, *New application*, *New module*, and *Export backup*.
 

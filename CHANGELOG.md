@@ -2,6 +2,22 @@
 
 All notable changes to OpsDesk. Versions follow [semver](https://semver.org); the data schema is versioned separately (currently v1) and only changes when stored data would need migration.
 
+## 1.2.0 — 2026-09-02
+
+For everyone who isn't an IT person: OpsDesk no longer assumes you know what a debit or a DMZ is.
+
+### Added
+- **Welcome screen** on first run: choose *Keep it simple* (everyday starter, plain language) or *The full IT department* (demo homelab, pro terms). Existing users never see it.
+- **Simple mode**: sidebar reads Home / To-dos / Money / Job hunt / Learning; money is entered as **"I spent money" / "I got paid" / "I moved money"** (how much, on what, paid with) while still writing correct double-entry books underneath; to-dos use plain questions ("What needs doing?", "Worth remembering"); the trial balance is replaced by a **"Where it went"** category breakdown; IT-only features (command vault, drills, lab) step out of the way.
+- **Module toggles** (Settings → Experience): turn Lab, Desk, Ledger, Pipeline, or Study on and off — navigation, dashboard, and the command palette all follow.
+- Simple starter data: everyday accounts, three worked examples, and one "Try me" to-do that teaches the money form.
+- Settings gains **Load simple starter** alongside the IT demo and Start blank.
+
+### Changed
+- Mode and module choices survive Start blank and backups; switching modes never touches your data.
+
+## 1.1.0 — 2026-09-01
+
 ## 1.1.0 — 2026-09-01
 
 ### Added

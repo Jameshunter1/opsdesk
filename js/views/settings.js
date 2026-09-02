@@ -12,6 +12,20 @@
     render: function (el) {
       var s = OD.db.settings;
 
+      var moduleDefs = [
+        { key: "ledger", why: "money in and out" },
+        { key: "desk", why: "to-dos, problems, and what you learned fixing them" },
+        { key: "pipeline", why: "job applications and follow-ups" },
+        { key: "study", why: "courses, certificates, practice" },
+        { key: "lab", why: "homelab: VMs, networks, firewall rules (IT folks)" }
+      ];
+      var moduleChecks = moduleDefs.map(function (m) {
+        var on = OD.moduleOn(m.key);
+        return '<label class="row" style="gap:8px;align-items:baseline">' +
+          '<input type="checkbox" data-module="' + m.key + '"' + (on ? " checked" : "") + ">" +
+          "<span><b>" + esc(OD.viewLabel(m.key)) + '</b> <span class="hint">— ' + esc(m.why) + "</span></span></label>";
+      }).join("");
+
       el.innerHTML =
         '<div class="grid grid-2">' +
 
@@ -28,6 +42,17 @@
         '<div><button class="btn primary" id="set-save" type="button">Save</button></div>' +
         "</div></div>" +
 
+        '<div class="card"><div class="card-title">Experience</div>' +
+        '<div class="stack">' +
+        '<div class="field"><label for="set-mode">How should things be worded?</label>' +
+        '<select class="control" id="set-mode">' +
+        '<option value="simple"' + (s.mode === "simple" ? " selected" : "") + ">Simple — plain everyday language</option>" +
+        '<option value="pro"' + (s.mode !== "simple" ? " selected" : "") + ">Pro — IT-department terms (tickets, ledger, debits)</option>" +
+        "</select>" +
+        '<span class="hint">Same data underneath either way — switch freely.</span></div>' +
+        '<div class="field"><label>What do you want to track?</label>' + moduleChecks + "</div>" +
+        "</div></div>" +
+
         '<div class="card"><div class="card-title">Your data</div>' +
         '<p class="subtle">Everything lives in this browser’s local storage — nothing leaves your machine. ' +
         "Export a JSON backup before clearing browser data or moving computers.</p>" +
@@ -38,7 +63,8 @@
         "</div>" +
         '<div class="card-title" style="margin-top:20px">Danger zone</div>' +
         '<div class="row">' +
-        '<button class="btn" id="data-seed" type="button">Reset to sample data</button>' +
+        '<button class="btn" id="data-seed" type="button">Load IT demo data</button>' +
+        '<button class="btn" id="data-simple" type="button">Load simple starter</button>' +
         '<button class="btn danger" id="data-blank" type="button">Start blank</button>' +
         "</div></div>" +
 
@@ -56,8 +82,14 @@
       el.querySelector("#set-save").addEventListener("click", function () {
         s.name = el.querySelector("#set-name").value.trim();
         s.theme = el.querySelector("#set-theme").value;
+        s.mode = el.querySelector("#set-mode").value;
+        s.modules = s.modules || {};
+        el.querySelectorAll("[data-module]").forEach(function (cb) {
+          s.modules[cb.getAttribute("data-module")] = cb.checked;
+        });
         OD.store.save();
         OD.app.applyTheme();
+        OD.app.refresh();
         OD.ui.toast("Settings saved.");
       });
 
@@ -94,13 +126,25 @@
 
       el.querySelector("#data-seed").addEventListener("click", function () {
         OD.ui.confirm({
-          title: "Reset to sample data?",
-          message: "Everything you've entered is replaced by the demo homelab. Export a backup first if you care about the current data."
+          title: "Load the IT demo?",
+          message: "Everything you've entered is replaced by the demo homelab (Pro mode). Export a backup first if you care about the current data."
         }, function () {
           OD.store.resetToSeed();
           OD.app.applyTheme();
           OD.app.refresh();
-          OD.ui.toast("Sample data restored.");
+          OD.ui.toast("Demo homelab loaded.");
+        });
+      });
+
+      el.querySelector("#data-simple").addEventListener("click", function () {
+        OD.ui.confirm({
+          title: "Load the simple starter?",
+          message: "Everything you've entered is replaced by the everyday starter (Simple mode). Export a backup first if you care about the current data."
+        }, function () {
+          OD.store.resetToSimple(s.name);
+          OD.app.applyTheme();
+          OD.app.refresh();
+          OD.ui.toast("Simple starter loaded.");
         });
       });
 

@@ -11,15 +11,16 @@
   var CERT_TONE = { planned: "plain", studying: "accent", scheduled: "warning", passed: "good" };
 
   function moduleForm(m) {
+    var simple = OD.isSimple();
     OD.ui.form({
-      title: m ? "Edit module" : "New module",
+      title: m ? (simple ? "Edit topic" : "Edit module") : (simple ? "New topic" : "New module"),
       values: m,
       fields: [
-        { key: "name", label: "Module name", required: true, span2: true, placeholder: "Module 2 — TLS & internal CA" },
+        { key: "name", label: simple ? "What are you learning?" : "Module name", required: true, span2: true, placeholder: simple ? "Excel basics, driving lessons, French…" : "Module 2 — TLS & internal CA" },
         { key: "status", label: "Status", type: "select", options: OD.enums.moduleStatus },
         { key: "hours", label: "Hours logged", type: "number", step: "0.5" },
-        { key: "topics", label: "Topics", span2: true, placeholder: "What this module covers" },
-        { key: "proof", label: "Proof of work", span2: true, placeholder: "The demonstrable thing that says it's done" },
+        { key: "topics", label: simple ? "Details" : "Topics", span2: true, placeholder: simple ? "What it covers (optional)" : "What this module covers" },
+        { key: "proof", label: simple ? "How will you know it's done?" : "Proof of work", span2: true, placeholder: simple ? "e.g. I can build a monthly budget sheet myself" : "The demonstrable thing that says it's done" },
         { key: "notes", label: "Notes", type: "textarea", span2: true }
       ],
       onSubmit: function (v) {
@@ -181,26 +182,28 @@
   OD.views.study = {
     title: "Study",
     actions: function () {
-      return [
-        { label: "Command drill", onClick: drill },
-        { label: "Interview drill", onClick: interviewDrill },
-        { label: "+ Module", primary: true, onClick: function () { moduleForm(null); } }
-      ];
+      var simple = OD.isSimple();
+      var a = [];
+      if (!simple) a.push({ label: "Command drill", onClick: drill });
+      a.push({ label: "Interview drill", onClick: interviewDrill });
+      a.push({ label: simple ? "+ Add topic" : "+ Module", primary: true, onClick: function () { moduleForm(null); } });
+      return a;
     },
 
     render: function (el) {
       var db = OD.db;
+      var simple = OD.isSimple();
       var done = db.modules.filter(function (m) { return m.status === "done"; }).length;
       var hours = db.modules.reduce(function (s, m) { return s + (Number(m.hours) || 0); }, 0);
       var passed = db.certs.filter(function (c) { return c.status === "passed"; }).length;
       var pct = db.modules.length ? (done / db.modules.length) * 100 : 0;
 
       var html = '<div class="tiles">' +
-        '<div class="tile"><div class="tile-label">Curriculum</div><div class="tile-value">' + done + " <small>of " + db.modules.length + " modules</small></div>" +
+        '<div class="tile"><div class="tile-label">' + (simple ? "Topics finished" : "Curriculum") + '</div><div class="tile-value">' + done + " <small>of " + db.modules.length + "</small></div>" +
         '<div style="margin-top:8px">' + OD.charts.meter(pct) + "</div></div>" +
         '<div class="tile"><div class="tile-label">Hours logged</div><div class="tile-value">' + hours + "</div></div>" +
-        '<div class="tile"><div class="tile-label">Certifications</div><div class="tile-value">' + passed + " <small>of " + db.certs.length + " passed</small></div></div>" +
-        '<div class="tile"><div class="tile-label">Commands in the vault</div><div class="tile-value">' + db.commands.length + "</div></div>" +
+        '<div class="tile"><div class="tile-label">' + (simple ? "Courses & certificates" : "Certifications") + '</div><div class="tile-value">' + passed + " <small>of " + db.certs.length + " done</small></div></div>" +
+        (simple ? "" : '<div class="tile"><div class="tile-label">Commands in the vault</div><div class="tile-value">' + db.commands.length + "</div></div>") +
         "</div>";
 
       /* curriculum */
@@ -213,36 +216,41 @@
           '<td class="fade">' + esc(m.proof) + "</td></tr>";
       }).join("");
 
-      html += '<div class="card section-gap"><div class="card-title">Curriculum <span class="right hint">click a row to edit</span></div>' +
-        OD.ui.table(["Module", "Status", { label: "Hours", cls: "num" }, "Topics", "Proof of work"], modRows,
-          "Add your first module — small, finishable, with a proof of work.") + "</div>";
+      html += '<div class="card section-gap"><div class="card-title">' + (simple ? "What I'm learning" : "Curriculum") + ' <span class="right hint">click a row to edit</span></div>' +
+        OD.ui.table([simple ? "Topic" : "Module", "Status", { label: "Hours", cls: "num" }, simple ? "Details" : "Topics", simple ? "How I'll know it's done" : "Proof of work"], modRows,
+          simple ? "Add something you're learning — a course, a skill, a book." : "Add your first module — small, finishable, with a proof of work.") + "</div>";
 
-      /* certs + vault side by side */
+      /* certs (+ command vault in pro mode) */
       var certRows = db.certs.map(function (c) {
         return '<tr class="clickable" data-cert="' + c.id + '"><td><b>' + esc(c.name) + "</b></td>" +
           "<td>" + OD.ui.badge(c.status, CERT_TONE[c.status]) + "</td>" +
           '<td class="fade">' + esc(c.date ? OD.fmt.dateFull(c.date) : "—") + "</td></tr>";
       }).join("");
 
-      var cmds = db.commands.filter(function (c) {
-        if (!search) return true;
-        var q = search.toLowerCase();
-        return (c.cmd + " " + c.what).toLowerCase().indexOf(q) !== -1;
-      });
-      var cmdRows = cmds.map(function (c) {
-        return '<tr class="clickable" data-cmd="' + c.id + '"><td class="mono">' + esc(c.cmd) + "</td><td>" + esc(c.what) + "</td></tr>";
-      }).join("");
-
-      html += '<div class="grid grid-2 section-gap">' +
-        '<div class="card"><div class="card-title">Certifications ' +
+      var certCard = '<div class="card"><div class="card-title">' + (simple ? "Courses & certificates" : "Certifications") + " " +
         '<button class="btn sm ghost right" id="add-cert" type="button">+ Add</button></div>' +
-        OD.ui.table(["Certification", "Status", "Date"], certRows, "Track exam targets here.") + "</div>" +
-        '<div class="card"><div class="card-title">Command vault ' +
-        '<button class="btn sm ghost right" id="add-cmd" type="button">+ Add</button></div>' +
-        '<div class="filters"><input class="control search-input" id="cmd-search" type="search" placeholder="Search the vault…" value="' + esc(search) + '"></div>' +
-        OD.ui.table(["Command", "What it does"], cmdRows,
-          db.commands.length ? "Nothing matches." : "Commands you want to know cold live here — then Drill them.") +
-        "</div></div>";
+        OD.ui.table([simple ? "Name" : "Certification", "Status", "Date"], certRows, simple ? "Courses, certificates, and goals with a date." : "Track exam targets here.") + "</div>";
+
+      if (simple) {
+        html += '<div class="section-gap">' + certCard + "</div>";
+      } else {
+        var cmds = db.commands.filter(function (c) {
+          if (!search) return true;
+          var q = search.toLowerCase();
+          return (c.cmd + " " + c.what).toLowerCase().indexOf(q) !== -1;
+        });
+        var cmdRows = cmds.map(function (c) {
+          return '<tr class="clickable" data-cmd="' + c.id + '"><td class="mono">' + esc(c.cmd) + "</td><td>" + esc(c.what) + "</td></tr>";
+        }).join("");
+
+        html += '<div class="grid grid-2 section-gap">' + certCard +
+          '<div class="card"><div class="card-title">Command vault ' +
+          '<button class="btn sm ghost right" id="add-cmd" type="button">+ Add</button></div>' +
+          '<div class="filters"><input class="control search-input" id="cmd-search" type="search" placeholder="Search the vault…" value="' + esc(search) + '"></div>' +
+          OD.ui.table(["Command", "What it does"], cmdRows,
+            db.commands.length ? "Nothing matches." : "Commands you want to know cold live here — then Drill them.") +
+          "</div></div>";
+      }
 
       el.innerHTML = html;
 
@@ -263,9 +271,10 @@
         });
       });
       el.querySelector("#add-cert").addEventListener("click", function () { certForm(null); });
-      el.querySelector("#add-cmd").addEventListener("click", function () { commandForm(null); });
+      var addCmd = el.querySelector("#add-cmd");
+      if (addCmd) addCmd.addEventListener("click", function () { commandForm(null); });
       var searchEl = el.querySelector("#cmd-search");
-      searchEl.addEventListener("input", function () {
+      if (searchEl) searchEl.addEventListener("input", function () {
         search = searchEl.value;
         var pos = searchEl.selectionStart;
         OD.app.refresh();

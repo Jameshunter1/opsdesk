@@ -15,15 +15,15 @@
   function activityFeed() {
     var items = [];
     OD.db.tickets.forEach(function (t) {
-      if (t.resolved) items.push({ date: t.resolved, tag: "Desk", tone: "good", text: "Resolved " + t.num + " — " + t.title });
-      else if (t.opened) items.push({ date: t.opened, tag: "Desk", tone: "warning", text: "Opened " + t.num + " — " + t.title });
+      if (t.resolved) items.push({ date: t.resolved, tag: OD.viewLabel("desk"), tone: "good", text: "Resolved " + t.num + " — " + t.title });
+      else if (t.opened) items.push({ date: t.opened, tag: OD.viewLabel("desk"), tone: "warning", text: "Opened " + t.num + " — " + t.title });
     });
     OD.db.txns.forEach(function (t) {
-      items.push({ date: t.date, tag: "Ledger", tone: "accent", text: t.desc + " · " + OD.fmt.money(t.amount) });
+      items.push({ date: t.date, tag: OD.viewLabel("ledger"), tone: "accent", text: t.desc + " · " + OD.fmt.money(t.amount) });
     });
     OD.db.jobs.forEach(function (j) {
       (j.activity || []).forEach(function (a) {
-        items.push({ date: a.date, tag: "Pipeline", tone: "plain", text: j.company + " — " + a.note });
+        items.push({ date: a.date, tag: OD.viewLabel("pipeline"), tone: "plain", text: j.company + " — " + a.note });
       });
     });
     items.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
@@ -67,23 +67,30 @@
           '<button class="btn sm right" data-act="dismiss-banner" type="button">Got it</button></div>';
       }
 
-      html += '<div class="tiles">' +
-        tile("Lab VMs running", String(running), "of " + labVms) +
-        tile("Open tickets", String(open.length), "", highCount ? highCount + " high priority" : (open.length ? "none high priority" : "all clear"), highCount ? "down" : "") +
-        tile("Net this month", OD.fmt.moneyCompact(cur.net), "", netDelta, netDiff >= 0 ? "up" : "down") +
-        tile("Active applications", String(active.length), "", interviews ? interviews + " at interview" : "", interviews ? "up" : "") +
-        '<div class="tile"><div class="tile-label">Study progress</div>' +
-        '<div class="tile-value">' + modsDone + " <small>of " + db.modules.length + " modules</small></div>" +
-        '<div style="margin-top:8px">' + OD.charts.meter(modsPct) + "</div></div>" +
-        "</div>";
+      var simple = OD.isSimple();
+      html += '<div class="tiles">';
+      if (OD.moduleOn("lab")) html += tile("Lab VMs running", String(running), "of " + labVms);
+      if (OD.moduleOn("desk")) html += tile(simple ? "Open to-dos" : "Open tickets", String(open.length), "", highCount ? highCount + " high priority" : (open.length ? "none high priority" : "all clear"), highCount ? "down" : "");
+      if (OD.moduleOn("ledger")) html += tile("Net this month", OD.fmt.moneyCompact(cur.net), "", netDelta, netDiff >= 0 ? "up" : "down");
+      if (OD.moduleOn("pipeline")) html += tile("Active applications", String(active.length), "", interviews ? interviews + " at interview" : "", interviews ? "up" : "");
+      if (OD.moduleOn("study")) {
+        html += '<div class="tile"><div class="tile-label">' + (simple ? "Learning" : "Study progress") + "</div>" +
+          '<div class="tile-value">' + modsDone + " <small>of " + db.modules.length + (simple ? " topics" : " modules") + "</small></div>" +
+          '<div style="margin-top:8px">' + OD.charts.meter(modsPct) + "</div></div>";
+      }
+      html += "</div>";
 
-      html += '<div class="grid grid-2 section-gap">' +
-        '<div class="card"><div class="card-title">Cash flow — last 6 months</div><div id="dash-cashflow"></div></div>' +
-        '<div class="card"><div class="card-title">Job pipeline</div><div id="dash-funnel"></div>' +
-        '<p class="hint" style="margin-top:10px">Counts by current stage · ' +
-        esc(String(db.jobs.filter(function (j) { return j.status === "rejected"; }).length)) + " closed out, " +
-        esc(String(db.jobs.filter(function (j) { return j.status === "accepted"; }).length)) + " accepted</p></div>" +
-        "</div>";
+      var chartCards = "";
+      if (OD.moduleOn("ledger")) {
+        chartCards += '<div class="card"><div class="card-title">' + (simple ? "Money in vs out — last 6 months" : "Cash flow — last 6 months") + '</div><div id="dash-cashflow"></div></div>';
+      }
+      if (OD.moduleOn("pipeline")) {
+        chartCards += '<div class="card"><div class="card-title">Job pipeline</div><div id="dash-funnel"></div>' +
+          '<p class="hint" style="margin-top:10px">Counts by current stage · ' +
+          esc(String(db.jobs.filter(function (j) { return j.status === "rejected"; }).length)) + " closed out, " +
+          esc(String(db.jobs.filter(function (j) { return j.status === "accepted"; }).length)) + " accepted</p></div>";
+      }
+      if (chartCards) html += '<div class="grid grid-2 section-gap">' + chartCards + "</div>";
 
       var openRows = open
         .slice()
@@ -104,34 +111,43 @@
           '<span class="feed-tag">' + OD.ui.badge(f.tag, f.tone) + "</span><span>" + esc(f.text) + "</span></div>";
       }).join("");
 
-      html += '<div class="grid grid-2 section-gap">' +
-        '<div class="card"><div class="card-title">Open tickets</div>' +
-        OD.ui.table(["#", "Title", "Priority", "Status"], openRows, "No open tickets — the desk is quiet.") + "</div>" +
-        '<div class="card"><div class="card-title">Recent activity</div>' +
+      var bottomCards = "";
+      if (OD.moduleOn("desk")) {
+        bottomCards += '<div class="card"><div class="card-title">' + (simple ? "Open to-dos" : "Open tickets") + "</div>" +
+          OD.ui.table(["#", "Title", "Priority", "Status"], openRows, simple ? "Nothing open — nice." : "No open tickets — the desk is quiet.") + "</div>";
+      }
+      bottomCards += '<div class="card"><div class="card-title">Recent activity</div>' +
         (feed ? '<div class="feed">' + feed + "</div>" : '<div class="empty">Activity from every module lands here.</div>') +
-        "</div></div>";
+        "</div>";
+      html += '<div class="grid grid-2 section-gap">' + bottomCards + "</div>";
 
       el.innerHTML = html;
 
-      // charts
-      var flows = months.map(function (k) { return OD.query.monthFlows(k); });
-      OD.charts.columns(el.querySelector("#dash-cashflow"), {
-        labels: months.map(OD.fmt.monthLabel),
-        series: [
-          { name: "Income", color: "var(--accent)", values: flows.map(function (f) { return f.income; }) },
-          { name: "Expenses", color: "var(--series-2)", values: flows.map(function (f) { return f.expense; }) }
-        ],
-        format: OD.fmt.moneyCompact,
-        ariaLabel: "Income and expenses by month"
-      });
+      // charts (each card exists only when its module is on)
+      var cashEl = el.querySelector("#dash-cashflow");
+      if (cashEl) {
+        var flows = months.map(function (k) { return OD.query.monthFlows(k); });
+        OD.charts.columns(cashEl, {
+          labels: months.map(OD.fmt.monthLabel),
+          series: [
+            { name: simple ? "In" : "Income", color: "var(--accent)", values: flows.map(function (f) { return f.income; }) },
+            { name: simple ? "Out" : "Expenses", color: "var(--series-2)", values: flows.map(function (f) { return f.expense; }) }
+          ],
+          format: OD.fmt.moneyCompact,
+          ariaLabel: "Money in and out by month"
+        });
+      }
 
-      var funnelRows = OD.enums.jobFunnel.map(function (s) {
-        return {
-          label: OD.fmt.title(s),
-          value: OD.db.jobs.filter(function (j) { return j.status === s; }).length
-        };
-      });
-      el.querySelector("#dash-funnel").innerHTML = OD.charts.hbars(funnelRows);
+      var funnelEl = el.querySelector("#dash-funnel");
+      if (funnelEl) {
+        var funnelRows = OD.enums.jobFunnel.map(function (s) {
+          return {
+            label: OD.fmt.title(s),
+            value: OD.db.jobs.filter(function (j) { return j.status === s; }).length
+          };
+        });
+        funnelEl.innerHTML = OD.charts.hbars(funnelRows);
+      }
 
       // wiring
       var dismiss = el.querySelector('[data-act="dismiss-banner"]');

@@ -28,15 +28,26 @@
 
   function routeName() {
     var h = location.hash.replace(/^#\//, "");
-    return OD.views[h] ? h : "dashboard";
+    if (!OD.views[h]) return "dashboard";
+    if (h !== "dashboard" && h !== "settings" && !OD.moduleOn(h)) return "dashboard";
+    return h;
   }
 
   app.render = function () {
     current = routeName();
     var view = OD.views[current];
+    var label = OD.viewLabel(current);
 
-    document.getElementById("view-title").textContent = view.title;
-    document.title = view.title + " · OpsDesk";
+    document.getElementById("view-title").textContent = label;
+    document.title = label + " · OpsDesk";
+
+    // nav reflects the mode: plain-language labels, hidden modules gone
+    document.querySelectorAll(".nav-link").forEach(function (l) {
+      var v = l.getAttribute("data-view");
+      var span = l.querySelector("span:not(.nav-badge)");
+      if (span) span.textContent = OD.viewLabel(v);
+      l.hidden = v !== "dashboard" && v !== "settings" && !OD.moduleOn(v);
+    });
 
     // topbar actions
     var actionsEl = document.getElementById("topbar-actions");
@@ -50,7 +61,6 @@
       actionsEl.appendChild(b);
     });
 
-    // active nav link + desk badge
     document.querySelectorAll(".nav-link").forEach(function (l) {
       l.classList.toggle("active", l.getAttribute("data-view") === current);
     });
@@ -89,6 +99,8 @@
 
     if (!location.hash) location.hash = "#/dashboard";
     app.render();
+
+    if (!OD.db.settings.onboarded) OD.welcome.show();
 
     // installable + offline when served over http(s); harmless no-op on file://
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {

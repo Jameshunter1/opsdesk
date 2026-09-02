@@ -6,7 +6,7 @@
 
   window.OD = window.OD || {};
   OD.views = OD.views || {};
-  OD.VERSION = "1.1.0";
+  OD.VERSION = "1.2.0";
 
   var KEY = "opsdesk.v1";
   var SCHEMA_VERSION = 1;
@@ -94,12 +94,38 @@
     }
   };
 
+  /* ---------- modes & module visibility ---------- */
+
+  OD.isSimple = function () { return OD.db.settings.mode === "simple"; };
+  OD.moduleOn = function (name) {
+    var m = OD.db.settings.modules;
+    return !m || m[name] !== false;
+  };
+
+  /* Plain-language names in simple mode; the IT-department names in pro. */
+  OD.viewLabel = function (view) {
+    if (OD.isSimple()) {
+      var simple = { dashboard: "Home", desk: "To-dos", ledger: "Money", pipeline: "Job hunt", study: "Learning", settings: "Settings", lab: "Lab" };
+      return simple[view] || view;
+    }
+    var pro = { dashboard: "Dashboard", lab: "Lab", desk: "Desk", ledger: "Ledger", pipeline: "Pipeline", study: "Study", settings: "Settings" };
+    return pro[view] || view;
+  };
+
   /* ---------- blank document ---------- */
+
+  function defaultSettings() {
+    return {
+      name: "", theme: "auto", seeded: false, bannerDismissed: false,
+      mode: "pro", onboarded: false,
+      modules: { lab: true, desk: true, ledger: true, pipeline: true, study: true }
+    };
+  }
 
   function blankDb() {
     return {
       version: SCHEMA_VERSION,
-      settings: { name: "", theme: "auto", seeded: false, bannerDismissed: false },
+      settings: defaultSettings(),
       counters: { ticket: 0 },
       zones: [],
       vms: [],
@@ -116,25 +142,37 @@
 
   /* ---------- persistence ---------- */
 
+  /* Fill in any keys added by newer versions, without touching real data. */
+  function upgrade(db) {
+    var fresh = blankDb();
+    Object.keys(fresh).forEach(function (k) {
+      if (db[k] === undefined) db[k] = fresh[k];
+    });
+    var s = defaultSettings();
+    Object.keys(s).forEach(function (k) {
+      if (db.settings[k] === undefined) db.settings[k] = s[k];
+    });
+    return db;
+  }
+
   OD.store = {
     init: function () {
       var raw = null;
       try { raw = localStorage.getItem(KEY); } catch (e) { /* storage blocked */ }
       if (raw) {
         try {
-          OD.db = JSON.parse(raw);
+          OD.db = upgrade(JSON.parse(raw));
         } catch (e) {
           OD.db = blankDb();
         }
-        // fill any keys added after the data was first written
-        var fresh = blankDb();
-        Object.keys(fresh).forEach(function (k) {
-          if (OD.db[k] === undefined) OD.db[k] = fresh[k];
-        });
+        // anyone with existing data predates the welcome screen — don't show it
+        if (raw && OD.db.settings.onboarded === false && (OD.db.tickets.length || OD.db.txns.length || OD.db.vms.length)) {
+          OD.db.settings.onboarded = true;
+        }
       } else {
-        OD.db = OD.seed ? OD.seed() : blankDb();
-        OD.db.settings.seeded = true;
-        OD.store.save();
+        // fresh install: an empty workspace behind the welcome screen,
+        // which seeds it according to what the person picks
+        OD.db = blankDb();
       }
     },
 
@@ -163,23 +201,38 @@
       if (!data || typeof data !== "object" || !Array.isArray(data.tickets) || !Array.isArray(data.vms)) {
         throw new Error("That file doesn't look like an OpsDesk backup.");
       }
-      var fresh = blankDb();
-      Object.keys(fresh).forEach(function (k) {
-        if (data[k] === undefined) data[k] = fresh[k];
-      });
+      if (!data.settings || typeof data.settings !== "object") data.settings = defaultSettings();
+      upgrade(data);
       data.version = SCHEMA_VERSION;
+      data.settings.onboarded = true;
       OD.db = data;
       OD.store.save();
     },
 
     resetToSeed: function () {
+      var keep = OD.db.settings;
       OD.db = OD.seed();
-      OD.db.settings.seeded = true;
+      OD.db.settings.name = keep.name;
+      OD.db.settings.theme = keep.theme;
+      OD.store.save();
+    },
+
+    resetToSimple: function (name) {
+      var theme = OD.db.settings.theme;
+      OD.db = OD.seedSimple();
+      OD.db.settings.theme = theme;
+      if (name) OD.db.settings.name = name;
       OD.store.save();
     },
 
     startBlank: function () {
+      var keep = OD.db.settings;
       OD.db = blankDb();
+      OD.db.settings.name = keep.name;
+      OD.db.settings.theme = keep.theme;
+      OD.db.settings.mode = keep.mode;
+      OD.db.settings.modules = keep.modules;
+      OD.db.settings.onboarded = true;
       OD.db.settings.bannerDismissed = true;
       OD.store.save();
     }

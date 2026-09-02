@@ -12,6 +12,17 @@ No server. No account. No build step. No telemetry. Open `index.html` and it run
 
 ---
 
+## Two modes — pick your language
+
+Not everyone runs a homelab, and nobody should need to know what a debit is to track their spending. On first run, OpsDesk asks one question:
+
+![Welcome screen](docs/welcome.png)
+
+- **Keep it simple** — plain everyday words: *Home, To-dos, Money, Job hunt, Learning*. Adding money is "I spent money / I got paid / I moved money" (how much, on what, paid with — done). No lab, no tickets, no accounting terms.
+- **The full IT department** — the pro experience below, loaded with a demo homelab: tickets, double-entry ledger, firewall matrix, command drills.
+
+Same data model underneath either way — a "simple" purchase is still a correct double-entry transaction, so you can switch modes (or toggle individual modules) anytime in Settings and nothing is lost.
+
 ## Why this exists
 
 Running a homelab, hunting for an IT job, studying for certs, and keeping your money straight are usually four scattered spreadsheets and a pile of notes. OpsDesk treats them as one operation, the way an actual IT department would:
@@ -41,7 +52,7 @@ cd opsdesk
 start index.html        # Windows — or just double-click it
 ```
 
-First run loads **sample data** modeled on a small VirtualBox + pfSense homelab (golden images, LAN/SRV/DMZ zones, a default-deny rules matrix) so every screen means something immediately. Make it yours by editing anything, or wipe it with **Settings → Start blank**.
+First run shows the welcome screen: **Keep it simple** starts you with everyday accounts and a couple of worked examples; **The full IT department** loads sample data modeled on a small VirtualBox + pfSense homelab (golden images, LAN/SRV/DMZ zones, a default-deny rules matrix) so every screen means something immediately. Either way, edit anything or wipe it in **Settings**.
 
 **Read the [user guide](docs/guide.md)** for a walkthrough of every module, and the [changelog](CHANGELOG.md) for what's new.
 
@@ -75,13 +86,14 @@ index.html            shell: sidebar, topbar, script order
 manifest.webmanifest  PWA identity (name, icons, colors)
 sw.js                 service worker — network-first cache for offline
 css/app.css           design tokens (light + dark) and all components
-js/store.js           state, persistence, export/import, shared queries
-js/seed.js            the demo homelab
+js/store.js           state, persistence, modes/modules, export/import, shared queries
+js/seed.js            the demo homelab + the simple-mode starter
 js/ui.js              escaping, badges, toasts, modals, generic form builder
 js/charts.js          SVG column chart, funnel bars, progress meter
 js/palette.js         Ctrl+K command palette
+js/welcome.js         first-run welcome: pick simple or pro
 js/views/*.js         one file per module (dashboard, lab, desk, ledger, pipeline, study, settings)
-js/app.js             hash router, theme, boot, SW registration
+js/app.js             hash router, theme, module-aware nav, boot, SW registration
 docs/                 user guide + screenshots
 ```
 

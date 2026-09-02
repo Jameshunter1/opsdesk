@@ -13,48 +13,56 @@
   function buildIndex() {
     var ix = [];
     var db = OD.db;
+    var simple = OD.isSimple();
+    var name = function (v) { return OD.viewLabel(v); };
 
-    // navigation
-    [["dashboard", "Dashboard"], ["lab", "Lab"], ["desk", "Desk"], ["ledger", "Ledger"],
-     ["pipeline", "Pipeline"], ["study", "Study"], ["settings", "Settings"]].forEach(function (v) {
-      ix.push({ label: "Go to " + v[1], sub: "", module: "Nav", tone: "plain", go: "#/" + v[0] });
+    // navigation — only modules that are switched on
+    ["dashboard", "lab", "desk", "ledger", "pipeline", "study", "settings"].forEach(function (v) {
+      if (v !== "dashboard" && v !== "settings" && !OD.moduleOn(v)) return;
+      ix.push({ label: "Go to " + name(v), sub: "", module: "Nav", tone: "plain", go: "#/" + v });
     });
 
     // quick actions
-    ix.push({ label: "New ticket", sub: "open an incident or task", module: "Desk", tone: "accent", go: "#/desk", open: function () { OD.views.desk.newTicket(); } });
-    ix.push({ label: "New transaction", sub: "post to the ledger", module: "Ledger", tone: "accent", go: "#/ledger", open: function () { OD.views.ledger.newTxn(); } });
-    ix.push({ label: "New application", sub: "track a job posting", module: "Pipeline", tone: "accent", go: "#/pipeline", open: function () { OD.views.pipeline.newJob(); } });
-    ix.push({ label: "New VM", sub: "add a machine to the fleet", module: "Lab", tone: "accent", go: "#/lab", open: function () { OD.views.lab.newVm(); } });
-    ix.push({ label: "New module", sub: "add to the curriculum", module: "Study", tone: "accent", go: "#/study", open: function () { OD.views.study.newModule(); } });
+    if (OD.moduleOn("desk")) ix.push({ label: simple ? "New to-do" : "New ticket", sub: simple ? "add something to handle" : "open an incident or task", module: name("desk"), tone: "accent", go: "#/desk", open: function () { OD.views.desk.newTicket(); } });
+    if (OD.moduleOn("ledger")) ix.push({ label: simple ? "Add money in or out" : "New transaction", sub: simple ? "spent, got paid, or moved money" : "post to the ledger", module: name("ledger"), tone: "accent", go: "#/ledger", open: function () { OD.views.ledger.newTxn(); } });
+    if (OD.moduleOn("pipeline")) ix.push({ label: "New application", sub: "track a job posting", module: name("pipeline"), tone: "accent", go: "#/pipeline", open: function () { OD.views.pipeline.newJob(); } });
+    if (OD.moduleOn("lab")) ix.push({ label: "New VM", sub: "add a machine to the fleet", module: name("lab"), tone: "accent", go: "#/lab", open: function () { OD.views.lab.newVm(); } });
+    if (OD.moduleOn("study")) ix.push({ label: simple ? "New topic" : "New module", sub: simple ? "something you're learning" : "add to the curriculum", module: name("study"), tone: "accent", go: "#/study", open: function () { OD.views.study.newModule(); } });
     ix.push({ label: "Export backup", sub: "download everything as JSON", module: "Settings", tone: "plain", go: "", open: function () { OD.store.exportJson(); OD.ui.toast("Backup downloaded."); } });
 
-    db.vms.forEach(function (v) {
-      ix.push({ label: v.name, sub: [v.os, v.zone, v.ip].filter(Boolean).join(" · "), extra: v.role, module: "Lab", tone: "good", go: "#/lab", open: function () { OD.views.lab.openVm(v.id); } });
+    if (OD.moduleOn("lab")) {
+      db.vms.forEach(function (v) {
+        ix.push({ label: v.name, sub: [v.os, v.zone, v.ip].filter(Boolean).join(" · "), extra: v.role, module: name("lab"), tone: "good", go: "#/lab", open: function () { OD.views.lab.openVm(v.id); } });
+      });
+      db.zones.forEach(function (z) {
+        ix.push({ label: z.name + " zone", sub: [z.iface, z.subnet].filter(Boolean).join(" · "), module: name("lab"), tone: "good", go: "#/lab", open: function () { OD.views.lab.openZone(z.id); } });
+      });
+    }
+    if (OD.moduleOn("desk")) db.tickets.forEach(function (t) {
+      ix.push({ label: t.num + " — " + t.title, sub: t.status + " · " + t.area, extra: [t.symptom, t.cause, t.lesson].join(" "), module: name("desk"), tone: "warning", go: "#/desk", open: function () { OD.views.desk.openTicket(t.id); } });
     });
-    db.zones.forEach(function (z) {
-      ix.push({ label: z.name + " zone", sub: [z.iface, z.subnet].filter(Boolean).join(" · "), module: "Lab", tone: "good", go: "#/lab", open: function () { OD.views.lab.openZone(z.id); } });
+    if (OD.moduleOn("ledger")) {
+      db.accounts.forEach(function (a) {
+        ix.push({ label: a.name, sub: a.type + " account", module: name("ledger"), tone: "accent", go: "#/ledger", open: function () { OD.views.ledger.openAccount(a.id); } });
+      });
+      db.txns.forEach(function (t) {
+        ix.push({ label: t.desc, sub: OD.fmt.date(t.date) + " · " + OD.fmt.money(t.amount), module: name("ledger"), tone: "accent", go: "#/ledger", open: function () { OD.views.ledger.openTxn(t.id); } });
+      });
+    }
+    if (OD.moduleOn("pipeline")) db.jobs.forEach(function (j) {
+      ix.push({ label: j.company + " — " + j.role, sub: j.status + (j.source ? " · " + j.source : ""), extra: j.notes, module: name("pipeline"), tone: "plain", go: "#/pipeline", open: function () { OD.views.pipeline.openJob(j.id); } });
     });
-    db.tickets.forEach(function (t) {
-      ix.push({ label: t.num + " — " + t.title, sub: t.status + " · " + t.area, extra: [t.symptom, t.cause, t.lesson].join(" "), module: "Desk", tone: "warning", go: "#/desk", open: function () { OD.views.desk.openTicket(t.id); } });
-    });
-    db.accounts.forEach(function (a) {
-      ix.push({ label: a.name, sub: a.type + " account", module: "Ledger", tone: "accent", go: "#/ledger", open: function () { OD.views.ledger.openAccount(a.id); } });
-    });
-    db.txns.forEach(function (t) {
-      ix.push({ label: t.desc, sub: OD.fmt.date(t.date) + " · " + OD.fmt.money(t.amount), module: "Ledger", tone: "accent", go: "#/ledger", open: function () { OD.views.ledger.openTxn(t.id); } });
-    });
-    db.jobs.forEach(function (j) {
-      ix.push({ label: j.company + " — " + j.role, sub: j.status + (j.source ? " · " + j.source : ""), extra: j.notes, module: "Pipeline", tone: "plain", go: "#/pipeline", open: function () { OD.views.pipeline.openJob(j.id); } });
-    });
-    db.modules.forEach(function (m) {
-      ix.push({ label: m.name, sub: m.status, extra: m.topics, module: "Study", tone: "critical", go: "#/study", open: function () { OD.views.study.openModule(m.id); } });
-    });
-    db.certs.forEach(function (c) {
-      ix.push({ label: c.name, sub: c.status + " · certification", module: "Study", tone: "critical", go: "#/study", open: function () { OD.views.study.openCert(c.id); } });
-    });
-    db.commands.forEach(function (c) {
-      ix.push({ label: c.cmd, sub: c.what, module: "Study", tone: "critical", go: "#/study", open: function () { OD.views.study.openCommand(c.id); } });
-    });
+    if (OD.moduleOn("study")) {
+      db.modules.forEach(function (m) {
+        ix.push({ label: m.name, sub: m.status, extra: m.topics, module: name("study"), tone: "critical", go: "#/study", open: function () { OD.views.study.openModule(m.id); } });
+      });
+      db.certs.forEach(function (c) {
+        ix.push({ label: c.name, sub: c.status, module: name("study"), tone: "critical", go: "#/study", open: function () { OD.views.study.openCert(c.id); } });
+      });
+      if (!simple) db.commands.forEach(function (c) {
+        ix.push({ label: c.cmd, sub: c.what, module: name("study"), tone: "critical", go: "#/study", open: function () { OD.views.study.openCommand(c.id); } });
+      });
+    }
 
     return ix;
   }

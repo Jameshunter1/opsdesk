@@ -228,7 +228,11 @@
 
     return {
       version: 1,
-      settings: { name: "", theme: "auto", seeded: true, bannerDismissed: false },
+      settings: {
+        name: "", theme: "auto", seeded: true, bannerDismissed: false,
+        mode: "pro", onboarded: true,
+        modules: { lab: true, desk: true, ledger: true, pipeline: true, study: true }
+      },
       counters: { ticket: tickets.length },
       zones: zones,
       vms: vms,
@@ -240,6 +244,63 @@
       modules: modules,
       certs: certs,
       commands: commands
+    };
+  };
+
+  /* Simple-mode starter: everyday accounts, a couple of worked examples,
+     and one to-do that teaches the app. No jargon, no homelab. */
+  OD.seedSimple = function () {
+    var id = OD.uid;
+
+    var acc = {
+      chequing: { id: id(), name: "Chequing", type: "asset" },
+      cash:     { id: id(), name: "Cash", type: "asset" },
+      card:     { id: id(), name: "Credit card", type: "liability" },
+      opening:  { id: id(), name: "Starting balance", type: "equity" },
+      pay:      { id: id(), name: "Pay", type: "income" },
+      rent:     { id: id(), name: "Rent / housing", type: "expense" },
+      groceries:{ id: id(), name: "Groceries", type: "expense" },
+      bills:    { id: id(), name: "Bills & subscriptions", type: "expense" },
+      transport:{ id: id(), name: "Getting around", type: "expense" },
+      fun:      { id: id(), name: "Fun", type: "expense" }
+    };
+
+    var txns = [
+      { id: id(), date: daysAgo(3), desc: "Example: groceries", amount: 62.5, debit: acc.groceries.id, credit: acc.chequing.id },
+      { id: id(), date: daysAgo(2), desc: "Example: got paid", amount: 800, debit: acc.chequing.id, credit: acc.pay.id },
+      { id: id(), date: daysAgo(1), desc: "Example: streaming subscription", amount: 14.99, debit: acc.bills.id, credit: acc.card.id }
+    ];
+
+    var tickets = [
+      {
+        id: id(), num: "T-0001", title: "Try me: add today's spending",
+        type: "task", area: "money", priority: "medium", status: "open",
+        opened: OD.todayISO(), resolved: "",
+        symptom: "",
+        cause: "",
+        fix: "Go to Money, press + Add, pick \"I spent money\", and put in something you bought today. Delete the three example transactions whenever you like — and this to-do too.",
+        lesson: ""
+      }
+    ];
+
+    return {
+      version: 1,
+      settings: {
+        name: "", theme: "auto", seeded: false, bannerDismissed: true,
+        mode: "simple", onboarded: true,
+        modules: { lab: false, desk: true, ledger: true, pipeline: true, study: true }
+      },
+      counters: { ticket: 1 },
+      zones: [],
+      vms: [],
+      rules: [],
+      tickets: tickets,
+      accounts: Object.keys(acc).map(function (k) { return acc[k]; }),
+      txns: txns,
+      jobs: [],
+      modules: [],
+      certs: [],
+      commands: []
     };
   };
 })();

@@ -13,20 +13,32 @@
   var PRIORITY_TONE = { high: "critical", medium: "warning", low: "plain" };
   var STATUS_TONE = { open: "warning", "in-progress": "accent", resolved: "good" };
 
+  function typeLabel(t) {
+    if (!OD.isSimple()) return t.type;
+    return t.type === "task" ? "to-do" : "problem";
+  }
+
   function ticketForm(t) {
+    var simple = OD.isSimple();
+    var typeOpts = simple
+      ? [{ value: "task", label: "To-do" }, { value: "incident", label: "Problem to solve" }]
+      : OD.enums.ticketType;
+    var areaOpts = simple
+      ? ["home", "money", "work", "family", "health", "other"]
+      : OD.enums.ticketArea;
     OD.ui.form({
-      title: t ? "Edit " + t.num : "New ticket",
+      title: t ? "Edit " + t.num : (simple ? "New to-do" : "New ticket"),
       values: t,
       fields: [
-        { key: "title", label: "Title", required: true, span2: true, placeholder: "Short, searchable summary of the problem or task" },
-        { key: "type", label: "Type", type: "select", options: OD.enums.ticketType },
-        { key: "area", label: "Area", type: "select", options: OD.enums.ticketArea },
+        { key: "title", label: simple ? "What needs doing?" : "Title", required: true, span2: true, placeholder: simple ? "Short and clear — you'll search for this later" : "Short, searchable summary of the problem or task" },
+        { key: "type", label: "Type", type: "select", options: typeOpts, default: simple ? "task" : "incident" },
+        { key: "area", label: "Area", type: "select", options: areaOpts },
         { key: "priority", label: "Priority", type: "select", options: OD.enums.ticketPriority, default: "medium" },
         { key: "status", label: "Status", type: "select", options: OD.enums.ticketStatus },
-        { key: "symptom", label: "Symptom", type: "textarea", span2: true, placeholder: "What it looked like from the outside" },
-        { key: "cause", label: "Root cause", type: "textarea", span2: true, placeholder: "The actual reason — not the first scary error line" },
-        { key: "fix", label: "Fix / plan", type: "textarea", span2: true, placeholder: "What resolved it, or the steps to take" },
-        { key: "lesson", label: "Lesson", type: "textarea", span2: true, placeholder: "The one-liner future-you needs. This is what goes in the KB." }
+        { key: "symptom", label: simple ? "What's going on?" : "Symptom", type: "textarea", span2: true, placeholder: simple ? "Describe it in your own words (optional)" : "What it looked like from the outside" },
+        { key: "cause", label: simple ? "What caused it?" : "Root cause", type: "textarea", span2: true, placeholder: simple ? "If you figured it out (optional)" : "The actual reason — not the first scary error line" },
+        { key: "fix", label: simple ? "The plan / what fixed it" : "Fix / plan", type: "textarea", span2: true, placeholder: simple ? "Steps to take, or what worked" : "What resolved it, or the steps to take" },
+        { key: "lesson", label: simple ? "Worth remembering" : "Lesson", type: "textarea", span2: true, placeholder: simple ? "One line so future-you doesn't relearn it" : "The one-liner future-you needs. This is what goes in the KB." }
       ],
       onSubmit: function (v) {
         if (t) {
@@ -70,7 +82,7 @@
     var m = OD.ui.openModal(
       OD.ui.modalHead(t.num + " — " + t.title) +
       '<div class="row" style="margin-bottom:12px">' +
-      OD.ui.badge(t.type, "plain") + OD.ui.badge(t.area, "plain") +
+      OD.ui.badge(typeLabel(t), "plain") + OD.ui.badge(t.area, "plain") +
       OD.ui.badge(t.priority, PRIORITY_TONE[t.priority]) + OD.ui.badge(t.status, STATUS_TONE[t.status]) +
       '<span class="hint right">opened ' + esc(OD.fmt.dateFull(t.opened)) +
       (t.resolved ? " · resolved " + esc(OD.fmt.dateFull(t.resolved)) : "") + "</span></div>" +
@@ -111,16 +123,19 @@
   OD.views.desk = {
     title: "Desk",
     actions: function () {
-      return [{ label: "+ New ticket", primary: true, onClick: function () { ticketForm(null); } }];
+      return [{ label: OD.isSimple() ? "+ New to-do" : "+ New ticket", primary: true, onClick: function () { ticketForm(null); } }];
     },
 
     render: function (el) {
       var db = OD.db;
+      var simple = OD.isSimple();
       var kbCount = db.tickets.filter(function (t) { return t.status === "resolved" && t.lesson; }).length;
 
       var html = '<div class="filters">' +
-        '<button class="btn sm' + (tab === "tickets" ? " primary" : "") + '" data-tab="tickets" type="button">Tickets (' + db.tickets.length + ")</button>" +
-        '<button class="btn sm' + (tab === "kb" ? " primary" : "") + '" data-tab="kb" type="button">Knowledge base (' + kbCount + ")</button>" +
+        '<button class="btn sm' + (tab === "tickets" ? " primary" : "") + '" data-tab="tickets" type="button">' +
+        (simple ? "To-dos" : "Tickets") + " (" + db.tickets.length + ")</button>" +
+        '<button class="btn sm' + (tab === "kb" ? " primary" : "") + '" data-tab="kb" type="button">' +
+        (simple ? "Solved & saved" : "Knowledge base") + " (" + kbCount + ")</button>" +
         '<span class="right"></span>';
 
       if (tab === "tickets") {
@@ -142,7 +157,7 @@
           return '<tr class="clickable" data-ticket="' + t.id + '">' +
             '<td class="mono fade">' + esc(t.num) + "</td>" +
             "<td><b>" + esc(t.title) + "</b></td>" +
-            "<td>" + OD.ui.badge(t.type, "plain") + "</td>" +
+            "<td>" + OD.ui.badge(typeLabel(t), "plain") + "</td>" +
             "<td>" + esc(t.area) + "</td>" +
             "<td>" + OD.ui.badge(t.priority, PRIORITY_TONE[t.priority]) + "</td>" +
             "<td>" + OD.ui.badge(t.status, STATUS_TONE[t.status]) + "</td>" +
