@@ -55,7 +55,7 @@
     --accent:      #3987e5;
     --accent-soft: #104281;
     --series-2:    #d95926;
-    --meter-track: #104281;
+    --meter-track: #222b37;
     --good-text: #0ca30c;
   }
 }
@@ -73,7 +73,7 @@
   --accent:      #3987e5;
   --accent-soft: #104281;
   --series-2:    #d95926;
-  --meter-track: #104281;
+  --meter-track: #222b37;
   --good-text: #0ca30c;
 }
 
@@ -515,6 +515,88 @@ select.control { max-width: 100%; }
   font-size: 11.5px;
   color: var(--muted);
 }
+
+/* ---------- goals engine (v2) ---------- */
+
+.score-big { font-size: 34px; font-weight: 650; letter-spacing: -0.01em; line-height: 1.1; }
+.score-big small { font-size: 15px; font-weight: 500; color: var(--muted); }
+.score-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.score-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.score-chip.ok { color: var(--good-text); background: var(--accent-soft); }
+
+.dotrow { display: flex; gap: 6px; flex-wrap: wrap; }
+.daydot { width: 16px; height: 16px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); }
+.daydot.good { background: var(--good); border-color: transparent; }
+.daydot.warn { background: var(--warning); border-color: transparent; }
+
+/* training week strip */
+.week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.week-day {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.week-day.today { border-color: var(--accent); }
+.week-name { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.week-label { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.week-mark { font-size: 12px; color: var(--good-text); min-height: 16px; }
+@media (max-width: 720px) { .week-strip { grid-template-columns: repeat(4, 1fr); } }
+
+/* workout exercise rows */
+.ex-head, .ex-row { display: grid; grid-template-columns: 1fr 64px 64px 76px 32px; gap: 8px; align-items: center; }
+.ex-head { font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.ex-row { margin-bottom: 8px; }
+
+/* projects */
+.project-card { margin-bottom: 14px; }
+.next-action {
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+.next-action.empty-next { background: var(--surface-2); color: var(--muted); font-size: 13px; }
+.next-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-right: 6px;
+}
+.task-list { display: flex; flex-direction: column; }
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 2px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.task-row:last-child { border-bottom: 0; }
+.task-row.done span { color: var(--muted); text-decoration: line-through; }
+.task-row span { flex: 1 1 auto; }
+.task-del { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 15px; padding: 2px 6px; border-radius: 5px; visibility: hidden; }
+.task-row:hover .task-del { visibility: visible; }
+.task-del:hover { background: var(--surface-2); color: var(--critical); }
 
 /* welcome (first run) */
 #welcome-overlay {

@@ -6,7 +6,7 @@
 
   window.OD = window.OD || {};
   OD.views = OD.views || {};
-  OD.VERSION = "1.2.0";
+  OD.VERSION = "2.0.0";
 
   var KEY = "opsdesk.v1";
   var SCHEMA_VERSION = 1;
@@ -105,10 +105,10 @@
   /* Plain-language names in simple mode; the IT-department names in pro. */
   OD.viewLabel = function (view) {
     if (OD.isSimple()) {
-      var simple = { dashboard: "Home", desk: "To-dos", ledger: "Money", pipeline: "Job hunt", study: "Learning", settings: "Settings", lab: "Lab" };
+      var simple = { dashboard: "Home", projects: "Projects", fitness: "Workouts", fuel: "Food", desk: "To-dos", ledger: "Money", pipeline: "Job hunt", study: "Learning", settings: "Settings", lab: "Lab" };
       return simple[view] || view;
     }
-    var pro = { dashboard: "Dashboard", lab: "Lab", desk: "Desk", ledger: "Ledger", pipeline: "Pipeline", study: "Study", settings: "Settings" };
+    var pro = { dashboard: "Dashboard", projects: "Projects", fitness: "Training", fuel: "Fuel", lab: "Lab", desk: "Desk", ledger: "Ledger", pipeline: "Pipeline", study: "Study", settings: "Settings" };
     return pro[view] || view;
   };
 
@@ -118,7 +118,8 @@
     return {
       name: "", theme: "auto", seeded: false, bannerDismissed: false,
       mode: "pro", onboarded: false,
-      modules: { lab: true, desk: true, ledger: true, pipeline: true, study: true }
+      units: { weight: "lb" },
+      modules: { projects: true, fitness: true, fuel: true, study: true, desk: true, ledger: true, pipeline: true, lab: true }
     };
   }
 
@@ -136,7 +137,17 @@
       jobs: [],
       modules: [],
       certs: [],
-      commands: []
+      commands: [],
+      /* goals engine (v2) */
+      projects: [],
+      workouts: [],
+      weighins: [],
+      routine: { days: { 0: "", 1: "", 2: "", 3: "", 4: "", 5: "", 6: "" } },
+      fuelPlan: null,
+      fuelLogs: [],
+      supps: [],
+      studyPlan: { target: 0 },
+      studyLogs: []
     };
   }
 
@@ -152,6 +163,13 @@
     Object.keys(s).forEach(function (k) {
       if (db.settings[k] === undefined) db.settings[k] = s[k];
     });
+    // nested defaults: new module keys and units for workspaces from older versions
+    Object.keys(s.modules).forEach(function (k) {
+      if (db.settings.modules[k] === undefined) db.settings.modules[k] = s.modules[k];
+    });
+    if (!db.settings.units || !db.settings.units.weight) db.settings.units = s.units;
+    if (!db.routine || !db.routine.days) db.routine = { days: { 0: "", 1: "", 2: "", 3: "", 4: "", 5: "", 6: "" } };
+    if (!db.studyPlan) db.studyPlan = { target: 0 };
     return db;
   }
 
@@ -288,6 +306,138 @@
 
     activeJobs: function () {
       return OD.db.jobs.filter(function (j) { return j.status !== "rejected" && j.status !== "accepted"; });
+    }
+  };
+
+  /* ---------- goals engine (v2): units, logs, and the daily 1% score ---------- */
+
+  OD.units = {
+    kgToLb: function (kg) { return kg * 2.20462; },
+    lbToKg: function (lb) { return lb / 2.20462; },
+    /* display weight in the user's unit, one decimal */
+    weight: function (kg) {
+      if ((OD.db.settings.units || {}).weight === "kg") return (Math.round(kg * 10) / 10) + " kg";
+      return (Math.round(OD.units.kgToLb(kg) * 10) / 10) + " lb";
+    }
+  };
+
+  OD.goals = {
+    dayISO: function (offset) {
+      var d = new Date();
+      d.setDate(d.getDate() + (offset || 0));
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    },
+    weekdayOf: function (iso) { return new Date(iso + "T12:00:00").getDay(); },
+
+    fuelLogFor: function (iso) {
+      return OD.db.fuelLogs.find(function (l) { return l.date === iso; }) || null;
+    },
+    kcalOf: function (log) {
+      return Math.round((Number(log.protein) || 0) * 4 + (Number(log.carbs) || 0) * 4 + (Number(log.fat) || 0) * 9);
+    },
+    suppsAllTaken: function (log) {
+      if (!OD.db.supps.length) return false;
+      if (!log || !log.supps) return false;
+      return OD.db.supps.every(function (s) { return log.supps[s.id]; });
+    },
+    workoutsOn: function (iso) {
+      return OD.db.workouts.filter(function (w) { return w.date === iso; });
+    },
+    studyMinutes: function (iso) {
+      return OD.db.studyLogs.reduce(function (sum, l) { return sum + (l.date === iso ? Number(l.minutes) || 0 : 0); }, 0);
+    },
+    routineActive: function () {
+      var days = OD.db.routine.days || {};
+      return Object.keys(days).some(function (k) { return (days[k] || "").trim(); });
+    },
+    plannedLabel: function (iso) {
+      return ((OD.db.routine.days || {})[OD.goals.weekdayOf(iso)] || "").trim();
+    },
+
+    /* The auto day score. Each configured component earns 1 point:
+         fuel   — logged, calories within ±10% of target, protein ≥ 90% of target
+         supps  — every supplement on the list ticked in that day's log
+         train  — planned day: a workout logged; rest day: kept by default
+         study  — minutes logged ≥ the daily target
+       Components only count when their module is on and configured, so an
+       unconfigured area never drags the score down. */
+    dayScore: function (iso) {
+      var possible = 0, earned = 0, parts = [];
+
+      if (OD.moduleOn("fuel") && OD.db.fuelPlan) {
+        possible++;
+        var log = OD.goals.fuelLogFor(iso);
+        var hit = false;
+        if (log) {
+          var kcal = OD.goals.kcalOf(log);
+          var t = OD.db.fuelPlan;
+          hit = Math.abs(kcal - t.kcal) <= t.kcal * 0.1 && (Number(log.protein) || 0) >= t.protein * 0.9;
+        }
+        if (hit) earned++;
+        parts.push({ key: "fuel", label: "Macros", ok: hit, detail: log ? "logged" : "not logged" });
+      }
+
+      if (OD.moduleOn("fuel") && OD.db.supps.length) {
+        possible++;
+        var taken = OD.goals.suppsAllTaken(OD.goals.fuelLogFor(iso));
+        if (taken) earned++;
+        parts.push({ key: "supps", label: "Supplements", ok: taken });
+      }
+
+      if (OD.moduleOn("fitness")) {
+        if (OD.goals.routineActive()) {
+          possible++;
+          var planned = OD.goals.plannedLabel(iso);
+          var isRest = !planned || /^rest$/i.test(planned);
+          var worked = OD.goals.workoutsOn(iso).length > 0;
+          var kept = isRest ? true : worked;
+          if (kept) earned++;
+          parts.push({ key: "train", label: isRest ? "Rest day" : planned, ok: kept, detail: isRest ? "recovery counts" : (worked ? "trained" : "not yet") });
+        } else if (OD.goals.workoutsOn(iso).length) {
+          possible++; earned++;
+          parts.push({ key: "train", label: "Trained", ok: true });
+        }
+      }
+
+      if (OD.moduleOn("study") && (OD.db.studyPlan.target || 0) > 0) {
+        possible++;
+        var mins = OD.goals.studyMinutes(iso);
+        var okS = mins >= OD.db.studyPlan.target;
+        if (okS) earned++;
+        parts.push({ key: "study", label: "Study " + OD.db.studyPlan.target + " min", ok: okS, detail: mins + " min" });
+      }
+
+      return { possible: possible, earned: earned, ratio: possible ? earned / possible : 0, parts: parts };
+    },
+
+    /* good ≥ 75% kept · warn = something kept · off = nothing tracked/kept */
+    dayTone: function (iso) {
+      var s = OD.goals.dayScore(iso);
+      if (!s.possible) return "off";
+      if (s.ratio >= 0.75) return "good";
+      if (s.earned > 0) return "warn";
+      return "off";
+    },
+
+    /* consecutive green days ending yesterday (today is still in progress) */
+    streak: function () {
+      var n = 0;
+      for (var i = 1; i <= 365; i++) {
+        if (OD.goals.dayTone(OD.goals.dayISO(-i)) === "good") n++;
+        else break;
+      }
+      return n;
+    },
+
+    /* the compounding curve: every kept day multiplies you by 1.01 */
+    compound: function (days) {
+      var out = [], value = 1;
+      for (var i = days - 1; i >= 1; i--) {
+        if (OD.goals.dayTone(OD.goals.dayISO(-i)) === "good") value *= 1.01;
+        out.push({ date: OD.goals.dayISO(-i), value: value });
+      }
+      out.push({ date: OD.goals.dayISO(0), value: value });
+      return out;
     }
   };
 })();

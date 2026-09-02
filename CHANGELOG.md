@@ -2,6 +2,26 @@
 
 All notable changes to OpsDesk. Versions follow [semver](https://semver.org); the data schema is versioned separately (currently v1) and only changes when stored data would need migration.
 
+## 2.0.0 — 2026-09-02
+
+OpsDesk grows from an IT-life tracker into a **goals engine** built on the 1%-per-day theory: projects, training, food, and study flow into one dashboard that scores every day automatically from what you log — guidance without micromanagement.
+
+### Added
+- **Projects** — outcomes broken into steps; each project surfaces exactly one *next action* (on the dashboard too); ticking steps feeds the activity feed.
+- **Training** — weekly routine with presets (Push/Pull/Legs, Upper/Lower, Full body) showing what today is; sets × reps × weight logging with dynamic exercise rows; cardio sessions; body-weight check-ins (lb or kg) with a trend line; automatic PR table (estimated 1RM via Epley).
+- **Fuel** — calorie **plan maker** (Mifflin-St Jeor + activity + goal → kcal/protein/carbs/fat, explained in plain words, recalculable) or manual targets; one daily log of protein/carbs/fat plus a supplement checklist (creatine, vitamins — your list); 14-day history with tolerant *on plan* badges (±10% kcal, protein ≥ 90%).
+- **Study targets** — a daily minutes goal, quick session logging, and week totals; feeds the day score.
+- **The 1% dashboard** — Today's score (auto-derived, component chips), day streak + best, a 14-day consistency strip, and the **compound curve** (every kept day ×1.01). Rest days count as kept; unconfigured areas don't count against you. Cross-module next actions and a unified activity feed (workouts, meals, weigh-ins, study, project steps, tickets, money, applications).
+- New chart primitives: line chart (weight, compound curve) and day-dot strip.
+- Command palette: new quick actions (log food / workout / weigh-in / study) and search over projects and workouts.
+
+### Changed
+- Navigation now leads with the goals cluster: Projects, Training, Fuel, Study — then Lab, Desk, Ledger, Pipeline. All eight modules toggleable in Settings.
+- Welcome screen and demo data updated: the pro demo now includes three weeks of training, nutrition, weigh-ins, study sessions, and two projects, so the 1% dashboard demonstrates itself.
+- App identity: "1% better every day."
+
+## 1.2.0 — 2026-09-02
+
 ## 1.2.0 — 2026-09-02
 
 For everyone who isn't an IT person: OpsDesk no longer assumes you know what a debit or a DMZ is.

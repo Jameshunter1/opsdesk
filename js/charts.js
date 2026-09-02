@@ -162,4 +162,93 @@
     return '<div class="meter" role="progressbar" aria-valuenow="' + Math.round(pct) +
       '" aria-valuemin="0" aria-valuemax="100"><span style="width:' + pct + '%"></span></div>';
   };
+
+  /* Line chart — 2px line, ≥8px end marker with a surface ring, hairline
+     grid, hover tooltip per point. Y scale pads around the data (a weight
+     trend must not start at zero). Optional reference line for a target. */
+  charts.line = function (container, opts) {
+    var pts = opts.points; // [{label, value}]
+    var H = opts.height || 180;
+    var fmtV = opts.format || function (n) { return OD.fmt.num(Math.round(n * 10) / 10); };
+
+    container.innerHTML = "";
+    if (!pts || pts.length < 2) {
+      container.innerHTML = '<div class="empty">' + esc(opts.emptyMsg || "Not enough data yet — two points make a line.") + "</div>";
+      return;
+    }
+
+    var box = document.createElement("div");
+    box.className = "chart-box";
+    container.appendChild(box);
+
+    var W = Math.max(280, box.clientWidth || container.clientWidth || 560);
+    var pad = { l: 52, r: 14, t: 10, b: 22 };
+    var plotW = W - pad.l - pad.r;
+    var plotH = H - pad.t - pad.b;
+
+    var lo = Infinity, hi = -Infinity;
+    pts.forEach(function (p) { if (p.value < lo) lo = p.value; if (p.value > hi) hi = p.value; });
+    if (opts.target != null) { lo = Math.min(lo, opts.target); hi = Math.max(hi, opts.target); }
+    var span = hi - lo || Math.abs(hi) * 0.05 || 1;
+    lo -= span * 0.15; hi += span * 0.15;
+
+    var x = function (i) { return pad.l + (i / (pts.length - 1)) * plotW; };
+    var y = function (v) { return pad.t + plotH - ((v - lo) / (hi - lo)) * plotH; };
+
+    var svg = "";
+    var TICKS = 3;
+    for (var t = 0; t <= TICKS; t++) {
+      var val = lo + ((hi - lo) * t) / TICKS;
+      var gy = y(val);
+      svg += '<line x1="' + pad.l + '" y1="' + gy + '" x2="' + (W - pad.r) + '" y2="' + gy + '" style="stroke:var(--line);stroke-width:1"/>';
+      svg += '<text x="' + (pad.l - 8) + '" y="' + (gy + 3.5) + '" text-anchor="end" font-size="11" style="fill:var(--muted)">' + esc(fmtV(val)) + "</text>";
+    }
+    if (opts.target != null) {
+      var ty = y(opts.target);
+      svg += '<line x1="' + pad.l + '" y1="' + ty + '" x2="' + (W - pad.r) + '" y2="' + ty + '" style="stroke:var(--muted);stroke-width:1"/>' +
+        '<text x="' + (W - pad.r) + '" y="' + (ty - 4) + '" text-anchor="end" font-size="10" style="fill:var(--muted)">' + esc(opts.targetLabel || "target") + "</text>";
+    }
+
+    var path = pts.map(function (p, i) { return (i ? "L" : "M") + x(i) + "," + y(p.value); }).join(" ");
+    svg += '<path d="' + path + '" fill="none" style="stroke:var(--accent);stroke-width:2" stroke-linecap="round" stroke-linejoin="round"/>';
+
+    // first/last x labels only — the tooltip carries the rest
+    svg += '<text x="' + pad.l + '" y="' + (H - 6) + '" font-size="11" style="fill:var(--muted)">' + esc(pts[0].label) + "</text>";
+    svg += '<text x="' + (W - pad.r) + '" y="' + (H - 6) + '" text-anchor="end" font-size="11" style="fill:var(--muted)">' + esc(pts[pts.length - 1].label) + "</text>";
+
+    // end marker with surface ring
+    var lx = x(pts.length - 1), ly = y(pts[pts.length - 1].value);
+    svg += '<circle cx="' + lx + '" cy="' + ly + '" r="6" style="fill:var(--accent);stroke:var(--surface);stroke-width:2"/>';
+
+    pts.forEach(function (p, i) {
+      var step = plotW / (pts.length - 1);
+      svg += '<rect data-pt="' + i + '" x="' + (x(i) - step / 2) + '" y="' + pad.t + '" width="' + step + '" height="' + plotH + '" fill="transparent"/>';
+    });
+
+    box.innerHTML = '<svg class="chart-svg" width="100%" height="' + H + '" viewBox="0 0 ' + W + " " + H +
+      '" role="img" aria-label="' + esc(opts.ariaLabel || "Line chart") + '">' + svg + "</svg>" +
+      '<div class="chart-tip"></div>';
+
+    var tip = box.querySelector(".chart-tip");
+    box.querySelectorAll("[data-pt]").forEach(function (r) {
+      var p = pts[Number(r.getAttribute("data-pt"))];
+      var i = Number(r.getAttribute("data-pt"));
+      r.addEventListener("mouseenter", function () {
+        tip.innerHTML = "<b>" + esc(p.label) + "</b> · " + esc(fmtV(p.value));
+        tip.style.display = "block";
+        var scaleX = box.clientWidth / W;
+        tip.style.left = Math.max(46, Math.min(box.clientWidth - 46, x(i) * scaleX)) + "px";
+        tip.style.top = Math.max(0, y(p.value) - 34) + "px";
+        tip.style.transform = "translateX(-50%)";
+      });
+      r.addEventListener("mouseleave", function () { tip.style.display = "none"; });
+    });
+  };
+
+  /* Consistency strip — one square per day, tone from the day score. */
+  charts.dayDots = function (days) {
+    return '<div class="dotrow">' + days.map(function (d) {
+      return '<span class="daydot ' + d.tone + '" title="' + esc(d.title) + '"></span>';
+    }).join("") + "</div>";
+  };
 })();

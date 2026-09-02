@@ -17,12 +17,17 @@
     var name = function (v) { return OD.viewLabel(v); };
 
     // navigation — only modules that are switched on
-    ["dashboard", "lab", "desk", "ledger", "pipeline", "study", "settings"].forEach(function (v) {
+    ["dashboard", "projects", "fitness", "fuel", "study", "lab", "desk", "ledger", "pipeline", "settings"].forEach(function (v) {
       if (v !== "dashboard" && v !== "settings" && !OD.moduleOn(v)) return;
       ix.push({ label: "Go to " + name(v), sub: "", module: "Nav", tone: "plain", go: "#/" + v });
     });
 
     // quick actions
+    if (OD.moduleOn("fuel")) ix.push({ label: "Log today's food", sub: "protein, carbs, fat + supplements", module: name("fuel"), tone: "accent", go: "#/fuel", open: function () { OD.views.fuel.logToday(); } });
+    if (OD.moduleOn("fitness")) ix.push({ label: "Log workout", sub: "lifting or cardio", module: name("fitness"), tone: "accent", go: "#/fitness", open: function () { OD.views.fitness.newWorkout(); } });
+    if (OD.moduleOn("fitness")) ix.push({ label: "Weigh-in", sub: "add a body-weight check-in", module: name("fitness"), tone: "accent", go: "#/fitness", open: function () { OD.views.fitness.newWeighin(); } });
+    if (OD.moduleOn("study")) ix.push({ label: "Log study time", sub: "minutes toward today's target", module: name("study"), tone: "accent", go: "#/study", open: function () { OD.views.study.logStudy(); } });
+    if (OD.moduleOn("projects")) ix.push({ label: "New project", sub: "an outcome with steps", module: name("projects"), tone: "accent", go: "#/projects", open: function () { OD.views.projects.newProject(); } });
     if (OD.moduleOn("desk")) ix.push({ label: simple ? "New to-do" : "New ticket", sub: simple ? "add something to handle" : "open an incident or task", module: name("desk"), tone: "accent", go: "#/desk", open: function () { OD.views.desk.newTicket(); } });
     if (OD.moduleOn("ledger")) ix.push({ label: simple ? "Add money in or out" : "New transaction", sub: simple ? "spent, got paid, or moved money" : "post to the ledger", module: name("ledger"), tone: "accent", go: "#/ledger", open: function () { OD.views.ledger.newTxn(); } });
     if (OD.moduleOn("pipeline")) ix.push({ label: "New application", sub: "track a job posting", module: name("pipeline"), tone: "accent", go: "#/pipeline", open: function () { OD.views.pipeline.newJob(); } });
@@ -40,6 +45,13 @@
     }
     if (OD.moduleOn("desk")) db.tickets.forEach(function (t) {
       ix.push({ label: t.num + " — " + t.title, sub: t.status + " · " + t.area, extra: [t.symptom, t.cause, t.lesson].join(" "), module: name("desk"), tone: "warning", go: "#/desk", open: function () { OD.views.desk.openTicket(t.id); } });
+    });
+    if (OD.moduleOn("projects")) db.projects.forEach(function (p) {
+      var open = (p.tasks || []).filter(function (t) { return !t.done; }).length;
+      ix.push({ label: p.name, sub: p.status + " · " + open + " steps left", extra: p.why, module: name("projects"), tone: "accent", go: "#/projects", open: function () { OD.views.projects.openProject(p.id); } });
+    });
+    if (OD.moduleOn("fitness")) db.workouts.slice(-60).forEach(function (w) {
+      ix.push({ label: w.label, sub: OD.fmt.date(w.date) + " · " + (w.kind === "cardio" ? (w.minutes + " min") : (w.entries || []).length + " exercises"), module: name("fitness"), tone: "good", go: "#/fitness", open: function () { OD.views.fitness.openWorkout(w.id); } });
     });
     if (OD.moduleOn("ledger")) {
       db.accounts.forEach(function (a) {

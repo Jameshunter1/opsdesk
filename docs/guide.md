@@ -4,7 +4,10 @@ OpsDesk is a **local-first** app: everything you enter lives in your browser, on
 
 - [Two modes: Simple and Pro](#two-modes-simple-and-pro)
 - [Getting around](#getting-around)
-- [Dashboard](#dashboard)
+- [The 1% dashboard](#the-1-dashboard)
+- [Projects](#projects)
+- [Training](#training)
+- [Fuel](#fuel)
 - [Lab](#lab)
 - [Desk](#desk)
 - [Ledger](#ledger)
@@ -41,11 +44,50 @@ The sidebar is the map — in Pro mode **Dashboard → Lab → Desk → Ledger �
 
 Everywhere in the app, **clicking a table row opens that record** for viewing or editing, and the buttons in the top-right corner create new records for the current module.
 
-## Dashboard
+## The 1% dashboard
 
-The morning-coffee view. Five tiles (VMs running, open tickets, net cash this month with a comparison to last month, active applications, study progress), six months of income vs. expenses, the job funnel by stage, your open tickets sorted by priority, and a recent-activity feed that merges events from every module.
+The home screen runs on one idea: **get 1% better on the days you show up, and let it compound.**
 
-On first run the whole app is filled with **sample data** modeled on a small VirtualBox + pfSense homelab, so every screen demonstrates itself. Dismiss the banner and edit anything — or wipe it in **Settings → Start blank**.
+**How a day is scored — automatically, from your logs:**
+
+| Component | Counts when… | Earned when… |
+|---|---|---|
+| Macros | you've made a food plan | day logged, calories within ±10% of target, protein ≥ 90% |
+| Supplements | your supplement list isn't empty | every one ticked in that day's food log |
+| Training | you've set a weekly routine | planned day → a workout is logged; **rest day → kept automatically** |
+| Study | you've set a daily minutes target | logged minutes reach the target |
+
+There is deliberately **no "mark day complete" button** — you log real things and the score derives itself, so the app can't nag and you can't fudge. Areas you haven't configured simply don't count, so nothing drags the score down while you're setting up.
+
+- **Green day** = 75%+ of your points → it extends your **streak** and multiplies the **compound curve** by ×1.01.
+- **Missed days don't punish you** — they just don't multiply. Streaks count through yesterday; today is always "in progress".
+- **Next actions** shows one step per active project plus your top open to-dos — never the whole mountain.
+- Everything you log anywhere lands in the **activity feed**.
+
+If nothing is configured yet, the dashboard shows three setup buttons (food plan, routine, study target) and gets out of the way.
+
+## Projects
+
+A project is any outcome with more than one step: pass a cert, redo a resume, clear the garage. Give it a name, a one-line *why* (it shows up when motivation doesn't), and steps. OpsDesk always highlights the **next** unfinished step — on the project card and on the dashboard. Ticking a step logs the date and feeds the activity feed. Status: active / paused / done.
+
+## Training
+
+- **Routine** — name each weekday (blank = rest) or tap a preset: Push/Pull/Legs, Upper/Lower ×4, Full body ×3. The week strip shows every day, today highlighted, checkmarks where you trained.
+- **Workouts** — *+ Log workout*: date, label (pre-filled with today's planned session), lifting or cardio. Lifting takes any number of exercise rows (name, sets, reps, weight); cardio takes minutes.
+- **PRs** — computed automatically: your best set per exercise with an estimated 1RM (Epley), sorted strongest first. Watch these climb — that's the clearest 1% there is.
+- **Weigh-ins** — quick entries in lb or kg (same scale, same time of day; the trend matters, single days don't). The trend line lives here and on the dashboard.
+
+## Fuel
+
+- **The plan maker** asks four things — body, age, height/weight, activity, goal — and computes daily calories (Mifflin-St Jeor × activity, then −20% to cut / +10% to build), protein (~0.8 g/lb), fat (25% of calories), carbs (the rest). Every number comes with a plain-words reason, and *Recalculate* is right there when your weight changes. Know your targets already? *Edit targets* sets them directly.
+- **The daily log** is one 20-second entry: protein, carbs, fat (calories compute themselves) plus a tick for each supplement on your list — creatine, vitamins, whatever you add. One log per day; click any day in the 14-day history to fix it.
+- **"On plan" is tolerant by design**: ±10% on calories and 90% on protein counts. Perfection kills streaks; good-enough compounds.
+
+## Dashboard (the ops cards)
+
+Below the 1% engine, the operational cards stay: six months of income vs. expenses, the job funnel, open tickets, and the merged activity feed. Modules you've turned off simply don't appear.
+
+On first run the app offers **sample data** so every screen demonstrates itself. Dismiss the banner and edit anything — or wipe it in **Settings**.
 
 ## Lab
 
@@ -87,8 +129,9 @@ Each application records the company, role, source, posting URL, salary, and —
 
 ## Study
 
-Three tools for deliberate learning:
+Deliberate learning, four tools:
 
+- **Daily target + log** — set a minutes-per-day target you can hit on a *bad* day (20–30 min compounds), then *+ Log study* records sessions. Hitting the target earns the study point in your day score; the tiles show today and the last 7 days.
 - **Curriculum** — modules with a status, hours logged, topics, and a **proof of work**: the demonstrable thing that says it's done ("fresh clone to SSH prompt, timed"). Progress feeds the dashboard meter.
 - **Certifications** — planned / studying / scheduled / passed, with target dates.
 - **Command vault** — the "commands I know cold" list. **Command drill** shuffles the vault and quizzes you description-first. **Interview drill** goes one better: it deals your *resolved tickets* as behavioural-interview practice — say your answer out loud (situation, diagnosis, what you did, takeaway), then check it against your own write-up. Your homelab war stories become interview answers.

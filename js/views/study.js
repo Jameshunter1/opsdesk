@@ -179,6 +179,51 @@
     draw();
   }
 
+  /* Daily study target + quick minutes log — the "guide" part:
+     a small number hit most days beats a heroic number hit twice. */
+  function targetForm() {
+    OD.ui.form({
+      title: "Daily study target",
+      values: { target: OD.db.studyPlan.target || "" },
+      fields: [
+        { key: "target", label: "Minutes per day", type: "number", required: true,
+          hint: "Pick something you can hit on a bad day — 20–30 min compounds; 0 turns the target off." }
+      ],
+      onSubmit: function (v) {
+        OD.db.studyPlan.target = Number(v.target) || 0;
+        OD.store.save();
+        OD.app.refresh();
+        OD.ui.toast(OD.db.studyPlan.target ? "Target set — " + OD.db.studyPlan.target + " min a day." : "Target off.");
+      }
+    });
+  }
+
+  function studyLogForm(entry) {
+    OD.ui.form({
+      title: entry ? "Edit study session" : "Log study time",
+      values: entry,
+      fields: [
+        { key: "date", label: "Date", type: "date", required: true, default: OD.todayISO() },
+        { key: "minutes", label: "Minutes", type: "number", required: true },
+        { key: "what", label: "What did you work on?", span2: true, placeholder: "Subnetting practice, chapter 4…" }
+      ],
+      onSubmit: function (v) {
+        if (entry) Object.assign(entry, v);
+        else { v.id = OD.uid(); OD.db.studyLogs.push(v); }
+        OD.store.save();
+        OD.app.refresh();
+        var t = OD.db.studyPlan.target;
+        var mins = OD.goals.studyMinutes(v.date);
+        OD.ui.toast(t && mins >= t ? "Target hit — " + mins + " min today." : "Logged " + v.minutes + " min.");
+      },
+      onDelete: entry && function () {
+        OD.db.studyLogs = OD.db.studyLogs.filter(function (x) { return x.id !== entry.id; });
+        OD.store.save();
+        OD.app.refresh();
+      }
+    });
+  }
+
   OD.views.study = {
     title: "Study",
     actions: function () {
@@ -186,7 +231,8 @@
       var a = [];
       if (!simple) a.push({ label: "Command drill", onClick: drill });
       a.push({ label: "Interview drill", onClick: interviewDrill });
-      a.push({ label: simple ? "+ Add topic" : "+ Module", primary: true, onClick: function () { moduleForm(null); } });
+      a.push({ label: simple ? "+ Add topic" : "+ Module", onClick: function () { moduleForm(null); } });
+      a.push({ label: "+ Log study", primary: true, onClick: function () { studyLogForm(null); } });
       return a;
     },
 
@@ -198,13 +244,37 @@
       var passed = db.certs.filter(function (c) { return c.status === "passed"; }).length;
       var pct = db.modules.length ? (done / db.modules.length) * 100 : 0;
 
+      var todayMins = OD.goals.studyMinutes(OD.todayISO());
+      var target = db.studyPlan.target || 0;
+      var weekMins = 0;
+      for (var wi = 0; wi < 7; wi++) weekMins += OD.goals.studyMinutes(OD.goals.dayISO(-wi));
+
       var html = '<div class="tiles">' +
+        '<div class="tile"><div class="tile-label">Today</div><div class="tile-value">' + todayMins +
+        (target ? " <small>of " + target + " min</small>" : " <small>min</small>") + "</div>" +
+        (target ? '<div style="margin-top:8px">' + OD.charts.meter(target ? (todayMins / target) * 100 : 0) + "</div>"
+          : '<div class="tile-delta">no daily target set</div>') + "</div>" +
+        '<div class="tile"><div class="tile-label">Last 7 days</div><div class="tile-value">' + weekMins + " <small>min</small></div></div>" +
         '<div class="tile"><div class="tile-label">' + (simple ? "Topics finished" : "Curriculum") + '</div><div class="tile-value">' + done + " <small>of " + db.modules.length + "</small></div>" +
         '<div style="margin-top:8px">' + OD.charts.meter(pct) + "</div></div>" +
-        '<div class="tile"><div class="tile-label">Hours logged</div><div class="tile-value">' + hours + "</div></div>" +
         '<div class="tile"><div class="tile-label">' + (simple ? "Courses & certificates" : "Certifications") + '</div><div class="tile-value">' + passed + " <small>of " + db.certs.length + " done</small></div></div>" +
         (simple ? "" : '<div class="tile"><div class="tile-label">Commands in the vault</div><div class="tile-value">' + db.commands.length + "</div></div>") +
         "</div>";
+
+      /* study log */
+      var logRows = db.studyLogs
+        .slice()
+        .sort(function (a, b) { return a.date < b.date ? 1 : -1; })
+        .slice(0, 10)
+        .map(function (l) {
+          return '<tr class="clickable" data-studylog="' + l.id + '"><td>' + esc(OD.fmt.date(l.date)) + "</td>" +
+            '<td class="num">' + esc(l.minutes) + "</td><td>" + esc(l.what || "—") + "</td></tr>";
+        }).join("");
+      html += '<div class="card section-gap"><div class="card-title">Study log ' +
+        '<button class="btn sm ghost right" id="study-target" type="button">' +
+        (target ? "Daily target: " + target + " min" : "Set a daily target") + "</button></div>" +
+        OD.ui.table(["Date", { label: "Minutes", cls: "num" }, "What"], logRows,
+          "Log sessions with + Log study — minutes count toward your day score once a target is set.") + "</div>";
 
       /* curriculum */
       var modRows = db.modules.map(function (m) {
@@ -270,6 +340,12 @@
           commandForm(db.commands.find(function (c) { return c.id === r.getAttribute("data-cmd"); }));
         });
       });
+      el.querySelector("#study-target").addEventListener("click", targetForm);
+      el.querySelectorAll("[data-studylog]").forEach(function (r) {
+        r.addEventListener("click", function () {
+          studyLogForm(db.studyLogs.find(function (l) { return l.id === r.getAttribute("data-studylog"); }));
+        });
+      });
       el.querySelector("#add-cert").addEventListener("click", function () { certForm(null); });
       var addCmd = el.querySelector("#add-cmd");
       if (addCmd) addCmd.addEventListener("click", function () { commandForm(null); });
@@ -286,6 +362,7 @@
 
   /* command-palette hooks */
   OD.views.study.newModule = function () { moduleForm(null); };
+  OD.views.study.logStudy = function () { studyLogForm(null); };
   OD.views.study.openModule = function (id) {
     var m = OD.db.modules.find(function (x) { return x.id === id; });
     if (m) moduleForm(m);

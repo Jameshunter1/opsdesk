@@ -1,7 +1,7 @@
 {
-  "name": "OpsDesk — a one-person IT department",
+  "name": "OpsDesk — 1% better every day",
   "short_name": "OpsDesk",
-  "description": "Homelab inventory, personal service desk, double-entry ledger, job pipeline, and study tracker — one local-first app.",
+  "description": "Projects, training, food & supplements, study, money, and job hunt in one local-first app that scores your day automatically.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

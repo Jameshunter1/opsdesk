@@ -13,10 +13,13 @@
       var s = OD.db.settings;
 
       var moduleDefs = [
-        { key: "ledger", why: "money in and out" },
+        { key: "projects", why: "outcomes broken into steps, always showing the next one" },
+        { key: "fitness", why: "workouts, weekly routine, weigh-ins, PRs" },
+        { key: "fuel", why: "calorie plan, daily macros, supplements" },
+        { key: "study", why: "daily study target, courses, certificates" },
         { key: "desk", why: "to-dos, problems, and what you learned fixing them" },
+        { key: "ledger", why: "money in and out" },
         { key: "pipeline", why: "job applications and follow-ups" },
-        { key: "study", why: "courses, certificates, practice" },
         { key: "lab", why: "homelab: VMs, networks, firewall rules (IT folks)" }
       ];
       var moduleChecks = moduleDefs.map(function (m) {

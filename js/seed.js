@@ -226,14 +226,111 @@
       { cmd: "Get-FileHash -Algorithm SHA256", what: "Verify a download (PowerShell)" }
     ].map(function (c) { c.id = id(); return c; });
 
+    /* ---------- goals demo: fuel, training, study, projects ---------- */
+
+    var supps = [
+      { id: id(), name: "Multivitamin", dose: "1/day" },
+      { id: id(), name: "Creatine", dose: "5 g" },
+      { id: id(), name: "Vitamin D", dose: "1000 IU" }
+    ];
+
+    var fuelPlan = {
+      kcal: 1990, protein: 150, fat: 55, carbs: 225,
+      stats: { sex: "male", age: 26, heightCm: 178, weightKg: 82, activity: "1.375", goal: "cut" }
+    };
+
+    var fuelLogs = [];
+    for (var fi = 1; fi <= 10; fi++) {
+      if (fi === 3) continue; // a real week has a hole in it
+      var lowDay = fi === 6;
+      var allSupps = {};
+      supps.forEach(function (s, si) { if (!(fi === 5 && si === 2)) allSupps[s.id] = true; });
+      fuelLogs.push({
+        id: id(), date: daysAgo(fi),
+        protein: lowDay ? 104 : 142 + ((fi * 7) % 16),
+        carbs: 205 + ((fi * 11) % 30),
+        fat: 50 + ((fi * 3) % 9),
+        note: "", supps: allSupps
+      });
+    }
+
+    var routine = { days: { 0: "", 1: "Push", 2: "", 3: "Pull", 4: "", 5: "Legs", 6: "" } };
+
+    var workouts = [];
+    var LIFTS = {
+      Push: [["Bench press", 3, 8], ["Overhead press", 3, 8], ["Incline DB press", 3, 10]],
+      Pull: [["Barbell row", 3, 8], ["Lat pulldown", 3, 10], ["Face pull", 3, 12]],
+      Legs: [["Squat", 3, 6], ["Romanian deadlift", 3, 8], ["Leg press", 3, 10]]
+    };
+    var BASE = { "Bench press": 135, "Overhead press": 85, "Incline DB press": 45, "Barbell row": 125, "Lat pulldown": 120, "Face pull": 40, "Squat": 185, "Romanian deadlift": 155, "Leg press": 270 };
+    for (var wi = 20; wi >= 1; wi--) {
+      var iso = daysAgo(wi);
+      var wd = new Date(iso + "T12:00:00").getDay();
+      var label = routine.days[wd];
+      if (!label) continue;
+      if (wi === 8) continue; // one missed session keeps it honest
+      var week = wi > 7 ? 0 : 1; // small progression between weeks
+      workouts.push({
+        id: id(), date: iso, kind: "lift", label: label + " day", minutes: 0,
+        entries: LIFTS[label].map(function (l) {
+          return { exercise: l[0], sets: l[1], reps: l[2], weight: BASE[l[0]] + week * 5 };
+        }),
+        notes: ""
+      });
+    }
+    workouts.push({ id: id(), date: daysAgo(2), kind: "cardio", label: "Walk", minutes: 40, entries: [], notes: "Podcast + sunshine" });
+
+    var weighins = [];
+    for (var wk = 8; wk >= 0; wk--) {
+      weighins.push({ id: id(), date: daysAgo(wk * 7), weightKg: Math.round((82 + wk * 0.28 + (wk % 2 ? 0.15 : -0.1)) * 10) / 10 });
+    }
+
+    var studyPlan = { target: 30 };
+    var studyLogs = [];
+    var TOPICS = ["Subnetting drills", "OSI layers review", "Ports & protocols flashcards", "Practice exam block", "Wireless standards", "Routing concepts"];
+    for (var si2 = 1; si2 <= 12; si2++) {
+      if (si2 === 4 || si2 === 9) continue;
+      studyLogs.push({ id: id(), date: daysAgo(si2), minutes: 25 + ((si2 * 9) % 26), what: TOPICS[si2 % TOPICS.length] });
+    }
+
+    var projects = [
+      {
+        id: id(), name: "Homelab — Module 4: AD domain", why: "dc01 + a joined win11 box is resume gold", status: "active", due: "",
+        tasks: [
+          { id: id(), text: "Install Windows Server 2025 on dc01", done: true, doneDate: daysAgo(6) },
+          { id: id(), text: "Promote to domain controller (AD DS + DNS)", done: true, doneDate: daysAgo(4) },
+          { id: id(), text: "Move DHCP from pfSense scope plan", done: false, doneDate: "" },
+          { id: id(), text: "Build win11 with EFI + TPM before first boot", done: false, doneDate: "" },
+          { id: id(), text: "Domain-join win11 and apply first GPO", done: false, doneDate: "" }
+        ]
+      },
+      {
+        id: id(), name: "Resume v13", why: "Every interview so far came from a tailored version", status: "active", due: "",
+        tasks: [
+          { id: id(), text: "Fold Module 4 lab work into the skills section", done: false, doneDate: "" },
+          { id: id(), text: "Ask two people to tear it apart", done: false, doneDate: "" }
+        ]
+      }
+    ];
+
     return {
       version: 1,
       settings: {
         name: "", theme: "auto", seeded: true, bannerDismissed: false,
         mode: "pro", onboarded: true,
-        modules: { lab: true, desk: true, ledger: true, pipeline: true, study: true }
+        units: { weight: "lb" },
+        modules: { projects: true, fitness: true, fuel: true, study: true, desk: true, ledger: true, pipeline: true, lab: true }
       },
       counters: { ticket: tickets.length },
+      projects: projects,
+      workouts: workouts,
+      weighins: weighins,
+      routine: routine,
+      fuelPlan: fuelPlan,
+      fuelLogs: fuelLogs,
+      supps: supps,
+      studyPlan: studyPlan,
+      studyLogs: studyLogs,
       zones: zones,
       vms: vms,
       rules: rules,
@@ -283,12 +380,24 @@
       }
     ];
 
+    var projects = [
+      {
+        id: id(), name: "Example project — clear out the garage", why: "So the car fits before winter", status: "active", due: "",
+        tasks: [
+          { id: id(), text: "Sort everything into keep / donate / trash", done: true, doneDate: daysAgo(1) },
+          { id: id(), text: "Drop the donate boxes off", done: false, doneDate: "" },
+          { id: id(), text: "Sweep and put shelves up", done: false, doneDate: "" }
+        ]
+      }
+    ];
+
     return {
       version: 1,
       settings: {
         name: "", theme: "auto", seeded: false, bannerDismissed: true,
         mode: "simple", onboarded: true,
-        modules: { lab: false, desk: true, ledger: true, pipeline: true, study: true }
+        units: { weight: "lb" },
+        modules: { projects: true, fitness: true, fuel: true, study: true, desk: true, ledger: true, pipeline: true, lab: false }
       },
       counters: { ticket: 1 },
       zones: [],
@@ -300,7 +409,16 @@
       jobs: [],
       modules: [],
       certs: [],
-      commands: []
+      commands: [],
+      projects: projects,
+      workouts: [],
+      weighins: [],
+      routine: { days: { 0: "", 1: "", 2: "", 3: "", 4: "", 5: "", 6: "" } },
+      fuelPlan: null,
+      fuelLogs: [],
+      supps: [],
+      studyPlan: { target: 0 },
+      studyLogs: []
     };
   };
 })();
