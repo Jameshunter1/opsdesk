@@ -202,4 +202,11 @@
       });
     }
   };
+
+  /* command-palette hooks */
+  OD.views.pipeline.newJob = function () { jobForm(null); };
+  OD.views.pipeline.openJob = function (id) {
+    var j = OD.db.jobs.find(function (x) { return x.id === id; });
+    if (j) jobDetail(j);
+  };
 })();

@@ -200,4 +200,11 @@
       });
     }
   };
+
+  /* command-palette hooks */
+  OD.views.desk.newTicket = function () { ticketForm(null); };
+  OD.views.desk.openTicket = function (id) {
+    var t = OD.db.tickets.find(function (x) { return x.id === id; });
+    if (t) ticketDetail(t);
+  };
 })();

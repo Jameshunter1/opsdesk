@@ -129,11 +129,61 @@
     draw();
   }
 
+  /* Interview drill — resolved tickets become behavioural-question practice.
+     The KB's cause → fix → lesson structure maps straight onto the answer
+     an interviewer wants to hear. */
+  function interviewDrill() {
+    var deck = OD.db.tickets.filter(function (t) { return t.status === "resolved" && t.lesson; });
+    if (!deck.length) {
+      OD.ui.toast("Resolve a ticket and write its lesson first — those become your interview answers.", true);
+      return;
+    }
+    for (var i = deck.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp;
+    }
+    var idx = 0, revealed = false;
+
+    var m = OD.ui.openModal(OD.ui.modalHead("Interview drill") + '<div id="idrill-body"></div>');
+    var body = m.querySelector("#idrill-body");
+
+    function part(label, text) {
+      if (!text) return "";
+      return '<div class="kb-part"><b>' + esc(label) + '</b><div class="prose-block">' + esc(text) + "</div></div>";
+    }
+
+    function draw() {
+      var t = deck[idx];
+      body.innerHTML =
+        '<p class="subtle">“Tell me about a technical problem you worked through.”</p>' +
+        '<div class="flash" style="margin-top:10px"><div class="flash-q">Your story: <b>' + esc(t.title) + "</b></div></div>" +
+        (revealed
+          ? part("Situation", t.symptom) + part("Diagnosis", t.cause) + part("What I did", t.fix) + part("Takeaway", t.lesson)
+          : '<p class="hint" style="margin-top:10px">Say your answer out loud — situation, diagnosis, what you did, takeaway — then check it against your own write-up.</p>') +
+        '<p class="hint" style="text-align:center;margin-top:10px">' + (idx + 1) + " of " + deck.length + "</p>" +
+        '<div class="modal-actions" style="justify-content:center">' +
+        (revealed
+          ? '<button class="btn primary" data-act="next" type="button">' + (idx + 1 < deck.length ? "Next story →" : "Finish") + "</button>"
+          : '<button class="btn primary" data-act="reveal" type="button">Check my answer</button>') +
+        "</div>";
+
+      var btn = body.querySelector("[data-act]");
+      btn.focus();
+      btn.addEventListener("click", function () {
+        if (!revealed) { revealed = true; draw(); return; }
+        if (idx + 1 < deck.length) { idx++; revealed = false; draw(); }
+        else { OD.ui.closeModal(); OD.ui.toast("Drill done — " + deck.length + " war stories, interview-ready."); }
+      });
+    }
+    draw();
+  }
+
   OD.views.study = {
     title: "Study",
     actions: function () {
       return [
-        { label: "Drill", onClick: drill },
+        { label: "Command drill", onClick: drill },
+        { label: "Interview drill", onClick: interviewDrill },
         { label: "+ Module", primary: true, onClick: function () { moduleForm(null); } }
       ];
     },
@@ -223,5 +273,20 @@
         if (again) { again.focus(); again.setSelectionRange(pos, pos); }
       });
     }
+  };
+
+  /* command-palette hooks */
+  OD.views.study.newModule = function () { moduleForm(null); };
+  OD.views.study.openModule = function (id) {
+    var m = OD.db.modules.find(function (x) { return x.id === id; });
+    if (m) moduleForm(m);
+  };
+  OD.views.study.openCert = function (id) {
+    var c = OD.db.certs.find(function (x) { return x.id === id; });
+    if (c) certForm(c);
+  };
+  OD.views.study.openCommand = function (id) {
+    var c = OD.db.commands.find(function (x) { return x.id === id; });
+    if (c) commandForm(c);
   };
 })();

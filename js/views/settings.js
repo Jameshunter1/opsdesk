@@ -48,7 +48,8 @@
         '<p class="subtle">A one-person IT department: homelab inventory, a personal service desk with a knowledge base, ' +
         "double-entry books, a job-application funnel, and a study tracker — in one local-first app. " +
         "No server, no account, no build step: plain HTML, CSS, and JavaScript.</p>" +
-        '<p class="hint" style="margin-top:8px">Data schema v' + esc(OD.db.version) + " · stored under the key <span class=\"mono\">opsdesk.v1</span></p>" +
+        '<p class="hint" style="margin-top:8px">OpsDesk v' + esc(OD.VERSION) + " · data schema v" + esc(OD.db.version) + " · stored under the key <span class=\"mono\">opsdesk.v1</span> · " +
+        '<span class="kbd">Ctrl K</span> searches everything</p>' +
         "</div>";
 
       /* wiring */

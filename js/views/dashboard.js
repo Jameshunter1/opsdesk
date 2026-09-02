@@ -53,7 +53,13 @@
       var netDiff = cur.net - prev.net;
       var netDelta = (netDiff >= 0 ? "▲ " : "▼ ") + OD.fmt.moneyCompact(Math.abs(netDiff)) + " vs " + OD.fmt.monthLabel(prevKey);
 
-      var html = "";
+      var now = new Date();
+      var hi = now.getHours() < 12 ? "Good morning" : now.getHours() < 17 ? "Good afternoon" : "Good evening";
+      var who = (db.settings.name || "").trim();
+      var html = '<div class="greeting spread">' +
+        "<h2>" + esc(hi + (who ? ", " + who : "")) + ".</h2>" +
+        '<span class="hint">' + esc(now.toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric" })) + "</span>" +
+        "</div>";
 
       if (db.settings.seeded && !db.settings.bannerDismissed) {
         html += '<div class="banner" style="margin-bottom:14px">' +

@@ -41,10 +41,14 @@
 
   /* ---------- modal plumbing ---------- */
 
+  var lastFocus = null;
+
   function closeModal() {
     var root = document.getElementById("modal-root");
     root.innerHTML = "";
     document.removeEventListener("keydown", onKey);
+    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
+    lastFocus = null;
   }
   function onKey(e) {
     if (e.key === "Escape") closeModal();
@@ -52,6 +56,7 @@
   ui.closeModal = closeModal;
 
   function openModal(html, narrow) {
+    lastFocus = document.activeElement;
     var root = document.getElementById("modal-root");
     root.innerHTML =
       '<div class="modal-overlay">' +

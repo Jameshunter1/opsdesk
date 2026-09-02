@@ -96,10 +96,36 @@
     });
   }
 
+  /* CSV export — opens cleanly in Excel/Sheets or real accounting software.
+     The ﻿ byte-order mark makes Excel read the UTF-8 correctly. */
+  function exportCsv() {
+    if (!OD.db.txns.length) {
+      OD.ui.toast("Nothing to export yet.", true);
+      return;
+    }
+    function cell(v) { return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"'; }
+    var rows = [["Date", "Description", "Debit account", "Credit account", "Amount"].map(cell).join(",")];
+    OD.db.txns
+      .slice()
+      .sort(function (a, b) { return a.date < b.date ? -1 : 1; })
+      .forEach(function (t) {
+        rows.push([t.date, t.desc, OD.query.accountName(t.debit), OD.query.accountName(t.credit), t.amount.toFixed(2)].map(cell).join(","));
+      });
+    var blob = new Blob(["﻿" + rows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "opsdesk-ledger-" + OD.todayISO() + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    OD.ui.toast("Ledger exported — " + OD.db.txns.length + " transactions.");
+  }
+
   OD.views.ledger = {
     title: "Ledger",
     actions: function () {
       return [
+        { label: "Export CSV", onClick: exportCsv },
         { label: "+ Account", onClick: function () { accountForm(null); } },
         { label: "+ Transaction", primary: true, onClick: function () { txnForm(null); } }
       ];
@@ -218,5 +244,16 @@
         OD.app.refresh();
       });
     }
+  };
+
+  /* command-palette hooks */
+  OD.views.ledger.newTxn = function () { txnForm(null); };
+  OD.views.ledger.openAccount = function (id) {
+    var a = OD.db.accounts.find(function (x) { return x.id === id; });
+    if (a) accountForm(a);
+  };
+  OD.views.ledger.openTxn = function (id) {
+    var t = OD.db.txns.find(function (x) { return x.id === id; });
+    if (t) txnForm(t);
   };
 })();

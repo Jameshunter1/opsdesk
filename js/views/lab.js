@@ -228,4 +228,15 @@
       });
     }
   };
+
+  /* command-palette hooks */
+  OD.views.lab.newVm = function () { vmForm(null); };
+  OD.views.lab.openVm = function (id) {
+    var v = OD.db.vms.find(function (x) { return x.id === id; });
+    if (v) vmForm(v);
+  };
+  OD.views.lab.openZone = function (id) {
+    var z = OD.db.zones.find(function (x) { return x.id === id; });
+    if (z) zoneForm(z);
+  };
 })();
