@@ -2,6 +2,19 @@
 
 All notable changes to OpsDesk. Versions follow [semver](https://semver.org); the data schema is versioned separately (currently v1) and only changes when stored data would need migration.
 
+## 3.0.0 — 2026-09-02
+
+**The slim-down.** Nine tabs was too much to track; five is the point. Breaking release: two modules removed outright.
+
+### Removed
+- **Ledger** (money) and **Pipeline** (job hunt) — deleted from the app at the user's request. Existing workspaces keep any old entries in an invisible `archive` section of the data document (it travels with backups; delete it from an exported file or Start blank to purge). Old `#/ledger` and `#/pipeline` links redirect home.
+
+### Changed
+- **Projects + Desk merged into one Tasks tab** — projects with highlighted next actions on top, loose to-dos below, and the lesson-powered knowledge base as its *Solved & saved* tab. Old routes redirect; module toggles migrate automatically.
+- **Study handles multiple plans** — each track (Network+, CCNA, anything) is a card with its own topics, progress, weekly minutes, and exam-date countdown; topics and study sessions are filed per plan (existing content migrates into a first plan). One daily minutes target still drives the day score.
+- **Lean dashboard** — score + tap-to-check habits, streak + 14-day dots, next actions, and activity. The compound curve and weight chart now sit behind a collapsed **Trends** toggle; the tiles row and removed-module cards are gone.
+- Settings shows **when you last backed up**; exporting stamps it.
+
 ## 2.1.0 — 2026-09-02
 
 The score learns nuance: check-off habits join the calculation, and being over or under target now **adjusts the score accordingly** instead of pass/fail.

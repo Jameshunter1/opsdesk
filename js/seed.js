@@ -13,49 +13,6 @@
 
   OD.seed = function () {
     var id = OD.uid;
-    var months = OD.lastMonths(6); // oldest → current
-
-    /* ---------- accounts ---------- */
-    var acc = {
-      chequing: { id: id(), name: "Chequing", type: "asset" },
-      cash:     { id: id(), name: "Cash", type: "asset" },
-      visa:     { id: id(), name: "Visa", type: "liability" },
-      opening:  { id: id(), name: "Opening balance", type: "equity" },
-      pay:      { id: id(), name: "Pay — support job", type: "income" },
-      rent:     { id: id(), name: "Rent", type: "expense" },
-      groceries:{ id: id(), name: "Groceries", type: "expense" },
-      car:      { id: id(), name: "Car & gas", type: "expense" },
-      lab:      { id: id(), name: "Lab & hardware", type: "expense" },
-      certs:    { id: id(), name: "Certs & courses", type: "expense" }
-    };
-
-    var txns = [];
-    function txn(date, desc, amount, debit, credit) {
-      txns.push({ id: id(), date: date, desc: desc, amount: amount, debit: debit.id, credit: credit.id });
-    }
-
-    txn(months[0] + "-01", "Opening balance", 3200, acc.chequing, acc.opening);
-
-    // five completed months of routine cash flow
-    for (var i = 0; i < 5; i++) {
-      var m = months[i];
-      txn(m + "-05", "Payday", 1350, acc.chequing, acc.pay);
-      txn(m + "-19", "Payday", 1350, acc.chequing, acc.pay);
-      txn(m + "-01", "Rent", 950, acc.rent, acc.chequing);
-      txn(m + "-08", "Groceries", 175 + i * 9, acc.groceries, acc.chequing);
-      txn(m + "-22", "Groceries", 168 + i * 7, acc.groceries, acc.chequing);
-      txn(m + "-12", "Gas", 105 + i * 6, acc.car, acc.chequing);
-    }
-    // lab & study spending, the fun part
-    txn(months[1] + "-14", "16 GB RAM upgrade (used)", 89, acc.lab, acc.visa);
-    txn(months[2] + "-03", "TP-Link 8-port gigabit switch", 46, acc.lab, acc.visa);
-    txn(months[2] + "-27", "Visa payment", 135, acc.visa, acc.chequing);
-    txn(months[3] + "-09", "Practice exam bundle (Network+)", 39, acc.certs, acc.visa);
-    txn(months[4] + "-16", "CompTIA Network+ exam voucher", 481, acc.certs, acc.chequing);
-    txn(months[4] + "-20", "ATM withdrawal", 60, acc.cash, acc.chequing);
-    txn(months[4] + "-21", "Cat6 patch cables + keystone jacks", 32, acc.lab, acc.cash);
-    // current month has just started
-    txn(months[5] + "-01", "Rent", 950, acc.rent, acc.chequing);
 
     /* ---------- lab: zones ---------- */
     var zones = [
@@ -148,57 +105,11 @@
       }
     ].map(function (t) { t.id = id(); return t; });
 
-    /* ---------- pipeline: job applications (sample employers) ---------- */
-    var jobs = [
-      {
-        company: "Lakeshore Credit Union", role: "Service Desk Analyst", source: "Indeed",
-        url: "", resume: "IT resume v12", salary: "CAD 26/hr", status: "interview", applied: daysAgo(12),
-        notes: "Financial-software support background is a direct match.",
-        activity: [
-          { date: daysAgo(12), note: "Applied with IT resume v12." },
-          { date: daysAgo(6), note: "Phone screen — asked about ticket volumes and escalation." },
-          { date: daysAgo(2), note: "In-person interview booked for next week. Review AD + M365 admin basics." }
-        ]
-      },
-      {
-        company: "Seaway Manufacturing", role: "IT Support Technician", source: "Indeed",
-        url: "", resume: "IT resume v12", salary: "", status: "applied", applied: daysAgo(8),
-        notes: "Shop-floor environment; shift coverage is a selling point.",
-        activity: [{ date: daysAgo(8), note: "Applied online." }]
-      },
-      {
-        company: "Vine & Vale Logistics", role: "Junior Network Administrator", source: "LinkedIn",
-        url: "", resume: "IT resume v11", salary: "CAD 55k", status: "screening", applied: daysAgo(15),
-        notes: "Posting mentions pfSense and VLANs — lead with the homelab.",
-        activity: [
-          { date: daysAgo(15), note: "Applied." },
-          { date: daysAgo(5), note: "Recruiter reply — screening call scheduled." }
-        ]
-      },
-      {
-        company: "Harbourview Accounting", role: "Accounts Payable Clerk", source: "Indeed",
-        url: "", resume: "Accounting resume", salary: "CAD 25/hr", status: "applied", applied: daysAgo(6),
-        notes: "Keeps the accounting track alive alongside IT applications.",
-        activity: [{ date: daysAgo(6), note: "Applied with accounting resume." }]
-      },
-      {
-        company: "Brockway College", role: "Helpdesk Technician (Tier 1)", source: "College board",
-        url: "", resume: "IT resume v12", salary: "", status: "saved", applied: "",
-        notes: "Posting closes soon — tailor the cover letter to student-facing support.",
-        activity: []
-      },
-      {
-        company: "Cataract Utilities", role: "NOC Technician (nights)", source: "Indeed",
-        url: "", resume: "IT resume v11", salary: "", status: "rejected", applied: daysAgo(25),
-        notes: "Wanted 2 years NOC experience.",
-        activity: [
-          { date: daysAgo(25), note: "Applied." },
-          { date: daysAgo(16), note: "Rejection email — keep an eye out for their junior postings." }
-        ]
-      }
-    ].map(function (j) { j.id = id(); return j; });
+    /* ---------- study: two plans, each with its own modules ---------- */
+    var planLab = { id: id(), name: "Homelab curriculum", status: "active", examDate: "" };
+    var planNet = { id: id(), name: "CompTIA Network+", status: "active", examDate: daysAgo(-42) };
+    var plans = [planNet, planLab];
 
-    /* ---------- study ---------- */
     var modules = [
       { name: "Module 0 — Lab foundation", status: "done", hours: 14, topics: "VirtualBox, golden images, linked clones, snapshots, SSH", proof: "Fresh clone to SSH prompt, timed." },
       { name: "Module 1 — Network core: pfSense", status: "active", hours: 9, topics: "Zones, DHCP, default-deny rules, aliases, packet capture", proof: "LAN client leases, resolves, and browses through my firewall." },
@@ -206,7 +117,14 @@
       { name: "Module 3 — Routing with FRR", status: "todo", hours: 0, topics: "OSPF between lab routers, branch site simulation", proof: "" },
       { name: "Module 4 — Active Directory domain", status: "todo", hours: 0, topics: "AD DS, DNS, DHCP on dc01; domain-join win11", proof: "" },
       { name: "Module 5 — Monitoring & SIEM", status: "todo", hours: 0, topics: "Wazuh agents, dashboards, alert triage", proof: "" }
-    ].map(function (m) { m.id = id(); m.notes = ""; return m; });
+    ].map(function (m) { m.id = id(); m.notes = ""; m.planId = planLab.id; return m; });
+
+    modules = modules.concat([
+      { name: "Networking fundamentals & OSI", status: "done", hours: 12, topics: "Models, encapsulation, ports & protocols", proof: "90%+ on two practice quizzes" },
+      { name: "Subnetting & IP addressing", status: "active", hours: 7, topics: "VLSM, CIDR, IPv6 basics", proof: "Solve 10 subnet problems under 10 minutes" },
+      { name: "Routing, switching & wireless", status: "todo", hours: 0, topics: "OSPF vs static, VLANs, 802.11 standards", proof: "" },
+      { name: "Practice exams week", status: "todo", hours: 0, topics: "Two full timed exams + review of misses", proof: "Both above passing score" }
+    ].map(function (m) { m.id = id(); m.notes = ""; m.planId = planNet.id; return m; }));
 
     var certs = [
       { name: "CompTIA A+", status: "passed", date: "" },
@@ -305,7 +223,7 @@
     var TOPICS = ["Subnetting drills", "OSI layers review", "Ports & protocols flashcards", "Practice exam block", "Wireless standards", "Routing concepts"];
     for (var si2 = 1; si2 <= 12; si2++) {
       if (si2 === 4 || si2 === 9) continue;
-      studyLogs.push({ id: id(), date: daysAgo(si2), minutes: 25 + ((si2 * 9) % 26), what: TOPICS[si2 % TOPICS.length] });
+      studyLogs.push({ id: id(), date: daysAgo(si2), minutes: 25 + ((si2 * 9) % 26), what: TOPICS[si2 % TOPICS.length], planId: planNet.id });
     }
 
     var projects = [
@@ -334,7 +252,7 @@
         name: "", theme: "auto", seeded: true, bannerDismissed: false,
         mode: "pro", onboarded: true,
         units: { weight: "lb" },
-        modules: { projects: true, fitness: true, fuel: true, study: true, desk: true, ledger: true, pipeline: true, lab: true }
+        modules: { tasks: true, fitness: true, fuel: true, study: true, lab: true }
       },
       counters: { ticket: tickets.length },
       projects: projects,
@@ -346,15 +264,13 @@
       supps: supps,
       studyPlan: studyPlan,
       studyLogs: studyLogs,
+      plans: plans,
       habits: habits,
       habitChecks: habitChecks,
       zones: zones,
       vms: vms,
       rules: rules,
       tickets: tickets,
-      accounts: Object.keys(acc).map(function (k) { return acc[k]; }),
-      txns: txns,
-      jobs: jobs,
       modules: modules,
       certs: certs,
       commands: commands
@@ -366,33 +282,14 @@
   OD.seedSimple = function () {
     var id = OD.uid;
 
-    var acc = {
-      chequing: { id: id(), name: "Chequing", type: "asset" },
-      cash:     { id: id(), name: "Cash", type: "asset" },
-      card:     { id: id(), name: "Credit card", type: "liability" },
-      opening:  { id: id(), name: "Starting balance", type: "equity" },
-      pay:      { id: id(), name: "Pay", type: "income" },
-      rent:     { id: id(), name: "Rent / housing", type: "expense" },
-      groceries:{ id: id(), name: "Groceries", type: "expense" },
-      bills:    { id: id(), name: "Bills & subscriptions", type: "expense" },
-      transport:{ id: id(), name: "Getting around", type: "expense" },
-      fun:      { id: id(), name: "Fun", type: "expense" }
-    };
-
-    var txns = [
-      { id: id(), date: daysAgo(3), desc: "Example: groceries", amount: 62.5, debit: acc.groceries.id, credit: acc.chequing.id },
-      { id: id(), date: daysAgo(2), desc: "Example: got paid", amount: 800, debit: acc.chequing.id, credit: acc.pay.id },
-      { id: id(), date: daysAgo(1), desc: "Example: streaming subscription", amount: 14.99, debit: acc.bills.id, credit: acc.card.id }
-    ];
-
     var tickets = [
       {
-        id: id(), num: "T-0001", title: "Try me: add today's spending",
-        type: "task", area: "money", priority: "medium", status: "open",
+        id: id(), num: "T-0001", title: "Try me: check off a habit on Home",
+        type: "task", area: "home", priority: "medium", status: "open",
         opened: OD.todayISO(), resolved: "",
         symptom: "",
         cause: "",
-        fix: "Go to Money, press + Add, pick \"I spent money\", and put in something you bought today. Delete the three example transactions whenever you like — and this to-do too.",
+        fix: "Go to Home and tap one of the habit chips (steps, bed on time, water). That's your day score moving. Then delete this to-do — you've got it.",
         lesson: ""
       }
     ];
@@ -414,19 +311,17 @@
         name: "", theme: "auto", seeded: false, bannerDismissed: true,
         mode: "simple", onboarded: true,
         units: { weight: "lb" },
-        modules: { projects: true, fitness: true, fuel: true, study: true, desk: true, ledger: true, pipeline: true, lab: false }
+        modules: { tasks: true, fitness: true, fuel: true, study: true, lab: false }
       },
       counters: { ticket: 1 },
       zones: [],
       vms: [],
       rules: [],
       tickets: tickets,
-      accounts: Object.keys(acc).map(function (k) { return acc[k]; }),
-      txns: txns,
-      jobs: [],
       modules: [],
       certs: [],
       commands: [],
+      plans: [],
       projects: projects,
       workouts: [],
       weighins: [],

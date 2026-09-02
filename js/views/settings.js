@@ -13,13 +13,10 @@
       var s = OD.db.settings;
 
       var moduleDefs = [
-        { key: "projects", why: "outcomes broken into steps, always showing the next one" },
+        { key: "tasks", why: "projects with next actions, loose to-dos, and your solved-it notes" },
         { key: "fitness", why: "workouts, weekly routine, weigh-ins, PRs" },
         { key: "fuel", why: "calorie plan, daily macros, supplements" },
-        { key: "study", why: "daily study target, courses, certificates" },
-        { key: "desk", why: "to-dos, problems, and what you learned fixing them" },
-        { key: "ledger", why: "money in and out" },
-        { key: "pipeline", why: "job applications and follow-ups" },
+        { key: "study", why: "study plans, daily target, drills" },
         { key: "lab", why: "homelab: VMs, networks, firewall rules (IT folks)" }
       ];
       var moduleChecks = moduleDefs.map(function (m) {
@@ -50,7 +47,7 @@
         '<div class="field"><label for="set-mode">How should things be worded?</label>' +
         '<select class="control" id="set-mode">' +
         '<option value="simple"' + (s.mode === "simple" ? " selected" : "") + ">Simple — plain everyday language</option>" +
-        '<option value="pro"' + (s.mode !== "simple" ? " selected" : "") + ">Pro — IT-department terms (tickets, ledger, debits)</option>" +
+        '<option value="pro"' + (s.mode !== "simple" ? " selected" : "") + ">Pro — ops terms (tickets, modules, the lab)</option>" +
         "</select>" +
         '<span class="hint">Same data underneath either way — switch freely.</span></div>' +
         '<div class="field"><label for="set-green">What keeps a day green? (extends streaks, bends the curve)</label>' +
@@ -65,6 +62,7 @@
         '<div class="card"><div class="card-title">Your data</div>' +
         '<p class="subtle">Everything lives in this browser’s local storage — nothing leaves your machine. ' +
         "Export a JSON backup before clearing browser data or moving computers.</p>" +
+        '<p class="hint" style="margin-top:8px">Last backup: <b>' + esc(s.lastBackup ? OD.fmt.dateFull(s.lastBackup) : "never") + "</b></p>" +
         '<div class="row" style="margin-top:12px">' +
         '<button class="btn" id="data-export" type="button">Export backup</button>' +
         '<button class="btn" id="data-import" type="button">Import backup</button>' +
@@ -80,8 +78,8 @@
         "</div>" +
 
         '<div class="card section-gap"><div class="card-title">About OpsDesk</div>' +
-        '<p class="subtle">A one-person IT department: homelab inventory, a personal service desk with a knowledge base, ' +
-        "double-entry books, a job-application funnel, and a study tracker — in one local-first app. " +
+        '<p class="subtle">Your goals, run like ops: tasks and projects, training, food and supplements, and study plans — ' +
+        "scored automatically on the 1%-better-per-day theory. " +
         "No server, no account, no build step: plain HTML, CSS, and JavaScript.</p>" +
         '<p class="hint" style="margin-top:8px">OpsDesk v' + esc(OD.VERSION) + " · data schema v" + esc(OD.db.version) + " · stored under the key <span class=\"mono\">opsdesk.v1</span> · " +
         '<span class="kbd">Ctrl K</span> searches everything</p>' +

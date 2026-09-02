@@ -26,8 +26,11 @@
 
   /* ---------- routing ---------- */
 
+  var LEGACY_ROUTES = { desk: "tasks", projects: "tasks", ledger: "dashboard", pipeline: "dashboard" };
+
   function routeName() {
     var h = location.hash.replace(/^#\//, "");
+    if (LEGACY_ROUTES[h]) h = LEGACY_ROUTES[h];
     if (!OD.views[h]) return "dashboard";
     if (h !== "dashboard" && h !== "settings" && !OD.moduleOn(h)) return "dashboard";
     return h;
@@ -64,10 +67,12 @@
     document.querySelectorAll(".nav-link").forEach(function (l) {
       l.classList.toggle("active", l.getAttribute("data-view") === current);
     });
-    var badge = document.getElementById("nav-badge-desk");
-    var open = OD.query.openTickets().length;
-    badge.hidden = open === 0;
-    badge.textContent = open;
+    var badge = document.getElementById("nav-badge-tasks");
+    if (badge) {
+      var open = OD.query.openTickets().length;
+      badge.hidden = open === 0;
+      badge.textContent = open;
+    }
 
     view.render(document.getElementById("view"));
   };

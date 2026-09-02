@@ -6,9 +6,57 @@
   var esc = function (s) { return OD.ui.esc(s); };
 
   var search = "";
+  var filterPlan = "all";
 
   var MOD_TONE = { todo: "plain", active: "accent", done: "good" };
   var CERT_TONE = { planned: "plain", studying: "accent", scheduled: "warning", passed: "good" };
+  var PLAN_TONE = { active: "accent", paused: "plain", done: "good" };
+
+  function planOptions(includeNone) {
+    var opts = OD.db.plans.map(function (p) { return { value: p.id, label: p.name }; });
+    if (includeNone) opts.push({ value: "", label: "General (no plan)" });
+    return opts;
+  }
+
+  function activePlanId() {
+    var p = OD.db.plans.find(function (x) { return x.status === "active"; });
+    return p ? p.id : "";
+  }
+
+  function planForm(p) {
+    OD.ui.form({
+      title: p ? "Edit plan" : "New study plan",
+      values: p,
+      fields: [
+        { key: "name", label: "Plan", required: true, span2: true, placeholder: "CompTIA Network+, CCNA, French…" },
+        { key: "status", label: "Status", type: "select", options: OD.enums.planStatus },
+        { key: "examDate", label: "Exam / target date", type: "date" }
+      ],
+      onSubmit: function (v) {
+        if (p) Object.assign(p, v);
+        else { v.id = OD.uid(); OD.db.plans.push(v); }
+        OD.store.save();
+        OD.app.refresh();
+        OD.ui.toast(p ? "Plan updated." : "Plan added — give it topics below.");
+      },
+      onDelete: p && function () {
+        OD.ui.confirm({ title: "Delete plan?", message: p.name + " — its topics and logged sessions stay, filed under General." }, function () {
+          OD.db.modules.forEach(function (m) { if (m.planId === p.id) m.planId = ""; });
+          OD.db.studyLogs.forEach(function (l) { if (l.planId === p.id) l.planId = ""; });
+          OD.db.plans = OD.db.plans.filter(function (x) { return x.id !== p.id; });
+          if (filterPlan === p.id) filterPlan = "all";
+          OD.store.save();
+          OD.app.refresh();
+        });
+      }
+    });
+  }
+
+  function daysUntil(iso) {
+    if (!iso) return null;
+    var ms = new Date(iso + "T12:00:00") - new Date(OD.todayISO() + "T12:00:00");
+    return Math.round(ms / 86400000);
+  }
 
   function moduleForm(m) {
     var simple = OD.isSimple();
@@ -17,6 +65,7 @@
       values: m,
       fields: [
         { key: "name", label: simple ? "What are you learning?" : "Module name", required: true, span2: true, placeholder: simple ? "Excel basics, driving lessons, French…" : "Module 2 — TLS & internal CA" },
+        { key: "planId", label: "Plan", type: "select", options: planOptions(true), default: filterPlan !== "all" ? filterPlan : activePlanId() },
         { key: "status", label: "Status", type: "select", options: OD.enums.moduleStatus },
         { key: "hours", label: "Hours logged", type: "number", step: "0.5" },
         { key: "topics", label: simple ? "Details" : "Topics", span2: true, placeholder: simple ? "What it covers (optional)" : "What this module covers" },
@@ -205,6 +254,7 @@
       fields: [
         { key: "date", label: "Date", type: "date", required: true, default: OD.todayISO() },
         { key: "minutes", label: "Minutes", type: "number", required: true },
+        { key: "planId", label: "Plan", type: "select", options: planOptions(true), default: activePlanId() },
         { key: "what", label: "What did you work on?", span2: true, placeholder: "Subnetting practice, chapter 4…" }
       ],
       onSubmit: function (v) {
@@ -231,7 +281,7 @@
       var a = [];
       if (!simple) a.push({ label: "Command drill", onClick: drill });
       a.push({ label: "Interview drill", onClick: interviewDrill });
-      a.push({ label: simple ? "+ Add topic" : "+ Module", onClick: function () { moduleForm(null); } });
+      a.push({ label: "+ Plan", onClick: function () { planForm(null); } });
       a.push({ label: "+ Log study", primary: true, onClick: function () { studyLogForm(null); } });
       return a;
     },
@@ -261,6 +311,28 @@
         (simple ? "" : '<div class="tile"><div class="tile-label">Commands in the vault</div><div class="tile-value">' + db.commands.length + "</div></div>") +
         "</div>";
 
+      /* plans — each track with its own progress, minutes, and countdown */
+      var planCards = db.plans.map(function (p) {
+        var mods = db.modules.filter(function (m) { return m.planId === p.id; });
+        var doneMods = mods.filter(function (m) { return m.status === "done"; }).length;
+        var mins7 = OD.query.planMinutes(p.id, 7);
+        var dleft = daysUntil(p.examDate);
+        return '<div class="card plan-card clickable" data-plan="' + p.id + '" style="cursor:pointer">' +
+          '<div class="spread"><span class="kb-title">' + esc(p.name) + "</span>" +
+          '<span class="row">' + OD.ui.badge(p.status, PLAN_TONE[p.status]) +
+          (dleft !== null && p.status !== "done" ? '<span class="hint">' + (dleft >= 0 ? dleft + " days left" : Math.abs(dleft) + " days past") + "</span>" : "") +
+          "</span></div>" +
+          '<div class="row" style="margin-top:10px;gap:12px"><div style="flex:1">' + OD.charts.meter(mods.length ? (doneMods / mods.length) * 100 : 0) + "</div>" +
+          '<span class="hint">' + doneMods + "/" + mods.length + " topics</span></div>" +
+          '<div class="hint" style="margin-top:6px">' + mins7 + " min this week</div>" +
+          "</div>";
+      }).join("");
+      if (db.plans.length) {
+        html += '<div class="grid grid-2 section-gap">' + planCards + "</div>";
+      } else {
+        html += '<div class="card section-gap"><div class="empty">Add a plan (+ Plan) for each thing you\'re working toward — Network+, CCNA, anything. Topics and study time get filed under it.</div></div>';
+      }
+
       /* study log */
       var logRows = db.studyLogs
         .slice()
@@ -268,27 +340,42 @@
         .slice(0, 10)
         .map(function (l) {
           return '<tr class="clickable" data-studylog="' + l.id + '"><td>' + esc(OD.fmt.date(l.date)) + "</td>" +
-            '<td class="num">' + esc(l.minutes) + "</td><td>" + esc(l.what || "—") + "</td></tr>";
+            '<td class="num">' + esc(l.minutes) + "</td>" +
+            "<td>" + OD.ui.badge(OD.query.planName(l.planId), "plain") + "</td>" +
+            "<td>" + esc(l.what || "—") + "</td></tr>";
         }).join("");
       html += '<div class="card section-gap"><div class="card-title">Study log ' +
         '<button class="btn sm ghost right" id="study-target" type="button">' +
         (target ? "Daily target: " + target + " min" : "Set a daily target") + "</button></div>" +
-        OD.ui.table(["Date", { label: "Minutes", cls: "num" }, "What"], logRows,
+        OD.ui.table(["Date", { label: "Minutes", cls: "num" }, "Plan", "What"], logRows,
           "Log sessions with + Log study — minutes count toward your day score once a target is set.") + "</div>";
 
-      /* curriculum */
-      var modRows = db.modules.map(function (m) {
+      /* curriculum — filterable by plan */
+      var mods = db.modules.filter(function (m) {
+        if (filterPlan === "all") return true;
+        if (filterPlan === "") return !m.planId;
+        return m.planId === filterPlan;
+      });
+      var modRows = mods.map(function (m) {
         return '<tr class="clickable" data-module="' + m.id + '">' +
           "<td><b>" + esc(m.name) + "</b></td>" +
+          "<td>" + OD.ui.badge(OD.query.planName(m.planId), "plain") + "</td>" +
           "<td>" + OD.ui.badge(m.status, MOD_TONE[m.status]) + "</td>" +
           '<td class="num">' + esc(m.hours || 0) + "</td>" +
           '<td class="fade">' + esc(m.topics) + "</td>" +
           '<td class="fade">' + esc(m.proof) + "</td></tr>";
       }).join("");
 
-      html += '<div class="card section-gap"><div class="card-title">' + (simple ? "What I'm learning" : "Curriculum") + ' <span class="right hint">click a row to edit</span></div>' +
-        OD.ui.table([simple ? "Topic" : "Module", "Status", { label: "Hours", cls: "num" }, simple ? "Details" : "Topics", simple ? "How I'll know it's done" : "Proof of work"], modRows,
-          simple ? "Add something you're learning — a course, a skill, a book." : "Add your first module — small, finishable, with a proof of work.") + "</div>";
+      html += '<div class="card section-gap"><div class="card-title">' + (simple ? "What I'm learning" : "Topics") +
+        '<span class="right row"><select class="control" id="study-plan-filter" style="width:auto">' +
+        '<option value="all"' + (filterPlan === "all" ? " selected" : "") + ">All plans</option>" +
+        db.plans.map(function (p) {
+          return '<option value="' + p.id + '"' + (filterPlan === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>";
+        }).join("") +
+        '<option value=""' + (filterPlan === "" ? " selected" : "") + '>General</option></select>' +
+        '<button class="btn sm ghost" id="study-add-topic" type="button">' + (simple ? "+ Topic" : "+ Module") + "</button></span></div>" +
+        OD.ui.table([simple ? "Topic" : "Module", "Plan", "Status", { label: "Hours", cls: "num" }, simple ? "Details" : "Topics", simple ? "How I'll know it's done" : "Proof of work"], modRows,
+          db.modules.length ? "Nothing under this plan yet." : (simple ? "Add something you're learning — a course, a skill, a book." : "Add your first module — small, finishable, with a proof of work.")) + "</div>";
 
       /* certs (+ command vault in pro mode) */
       var certRows = db.certs.map(function (c) {
@@ -341,6 +428,18 @@
         });
       });
       el.querySelector("#study-target").addEventListener("click", targetForm);
+      el.querySelectorAll("[data-plan]").forEach(function (c) {
+        c.addEventListener("click", function () {
+          planForm(db.plans.find(function (p) { return p.id === c.getAttribute("data-plan"); }));
+        });
+      });
+      var planFilter = el.querySelector("#study-plan-filter");
+      if (planFilter) planFilter.addEventListener("change", function (e) {
+        filterPlan = e.target.value;
+        OD.app.refresh();
+      });
+      var addTopic = el.querySelector("#study-add-topic");
+      if (addTopic) addTopic.addEventListener("click", function () { moduleForm(null); });
       el.querySelectorAll("[data-studylog]").forEach(function (r) {
         r.addEventListener("click", function () {
           studyLogForm(db.studyLogs.find(function (l) { return l.id === r.getAttribute("data-studylog"); }));
@@ -363,6 +462,11 @@
   /* command-palette hooks */
   OD.views.study.newModule = function () { moduleForm(null); };
   OD.views.study.logStudy = function () { studyLogForm(null); };
+  OD.views.study.newPlan = function () { planForm(null); };
+  OD.views.study.openPlan = function (id) {
+    var p = OD.db.plans.find(function (x) { return x.id === id; });
+    if (p) planForm(p);
+  };
   OD.views.study.openModule = function (id) {
     var m = OD.db.modules.find(function (x) { return x.id === id; });
     if (m) moduleForm(m);

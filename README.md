@@ -2,7 +2,7 @@
 
 **Run your goals like an operations department — and get 1% better every day.**
 
-Projects, training, food & supplements, study, money, job hunt, even a homelab — one local-first app with one dashboard that scores your day **automatically** from what you log. No server, no account, no build step, no telemetry.
+Tasks & projects, training, food & supplements, study plans, even a homelab — one local-first app with one calm dashboard that scores your day **automatically** from what you log. No server, no account, no build step, no telemetry.
 
 **Live:** https://jameshunter1.github.io/opsdesk/
 
@@ -23,30 +23,29 @@ The dashboard is built on a simple theory: **improve 1% on the days you show up,
 - **The compound curve is graded too** — a kept day multiplies you by 1% × its score: ×1.010 for a perfect day, up to ×1.0125 with overshoot, a little even for a bare showed-up day. Missed days don't punish you; they just don't multiply.
 - **Only what you configure counts.** No food plan? Fuel doesn't score. No routine? Training only scores when you log something. Guidance without micromanagement.
 
-## The departments
+## The departments — five tabs, on purpose
 
 | Module | What it does |
 |---|---|
-| **Projects** | Outcomes broken into steps. Every project always shows exactly one **next action** — never the whole mountain — and ticking a step lands on the dashboard. |
+| **Tasks** | One answer to "what should I do next?": projects (multi-step outcomes, each showing exactly one highlighted **next action**) plus loose to-dos with cause → fix → **lesson** — and everything you've solved lives in a searchable **Solved & saved** tab. |
 | **Training** | A weekly routine (Push/Pull/Legs and friends, preset or custom) that shows what today is; a real **sets × reps × weight** log; cardio sessions; body-weight check-ins with a trend line; automatic **PR table** with estimated 1RMs. |
-| **Fuel** | A **calorie plan maker**: four questions (Mifflin-St Jeor + activity + goal) → daily calories, protein, carbs, fat — explained in plain words. One 20-second log a day: macros + tick off vitamins/creatine. 14-day history with tolerant "on plan" badges. |
-| **Study** | A daily minutes target that feeds the score, quick session logging, curriculum modules with proof-of-work, a cert tracker, a command vault with drills — and an **interview drill** built from your own resolved tickets. |
-| **Desk** | Personal tickets/to-dos with cause → fix → **lesson**; resolved lessons become a searchable knowledge base. |
-| **Ledger** | Real double-entry books (or plain "I spent money" in Simple mode), trial balance, CSV export. |
-| **Pipeline** | Job applications by stage with an activity log and resume-version tracking. |
+| **Fuel** | A **calorie plan maker**: four questions (Mifflin-St Jeor + activity + goal) → daily calories, protein, carbs, fat — explained in plain words. One 20-second log a day: macros + tick off vitamins/creatine. 14-day history with graded "on plan" badges. |
+| **Study** | **Multiple plans at once** — Network+, CCNA, anything — each with its own topics, progress bar, weekly minutes, and exam countdown. A daily minutes target feeds the day score; sessions log against a plan; drills (including the **interview drill** built from your own solved problems) keep it sticky. |
 | **Lab** | Homelab inventory: VM fleet, network zones, and a firewall policy matrix where every rule needs a one-sentence reason. |
 
 Every module is **toggleable** in Settings — run only the departments you want. Press <kbd>Ctrl</kbd>+<kbd>K</kbd> anywhere to search everything and fire quick actions ("Log today's food", "Log workout", "Weigh-in"…).
 
+> v3 removed the Ledger (money) and Pipeline (job hunt) modules to keep the app focused. Workspaces that had entries keep them tucked in an invisible archive inside their backup file.
+
+![Study plans](docs/study.png)
 ![Training](docs/training.png)
-![Fuel](docs/fuel.png)
 
 ## Two modes — pick your language
 
 On first run, OpsDesk asks one question:
 
-- **Keep it simple** — plain everyday words: *Home, Projects, Workouts, Food, Learning, To-dos, Money*. Money entry is "I spent money / I got paid / I moved money"; to-dos ask "What needs doing?".
-- **The full IT department** — pro vocabulary (tickets, ledger, debits) plus the homelab module, loaded with demo data.
+- **Keep it simple** — plain everyday words: *Home, Tasks, Workouts, Food, Learning*; to-dos ask "What needs doing?".
+- **The full setup** — ops vocabulary (tickets, modules) plus the homelab tab, loaded with demo data.
 
 Same data model underneath — switching modes anytime is lossless.
 
@@ -71,8 +70,9 @@ Everything lives in your browser's `localStorage` — nothing ever leaves your m
 ## Design notes
 
 - **Zero dependencies, zero build** — classic scripts so it runs from `file://`; the shared-namespace trade-off is documented and deliberate.
-- **The score is derived, never declared.** There is no "mark day complete" button. You log real things (a workout, a meal total, minutes studied) and the day scores itself — that's what keeps it honest and un-naggy.
-- **Tolerance is a feature.** ±10% calories, 90% protein, rest days kept: the system is designed so a good-enough day counts, because streaks die on perfectionism.
+- **The score is mostly derived, never nagged.** You log real things (a workout, a meal total, minutes studied) and the day scores itself; the only manual part is habits you chose yourself, and they're one tap.
+- **Tolerance is a feature.** Goal-aware calorie bands, graded partial credit, rest days kept: a good-enough day counts, because streaks die on perfectionism.
+- **Less surface on purpose.** v3 deleted two whole modules and folded two more together — a tracker you'll actually open beats a dashboard that tracks everything.
 - **Charts follow a validated palette** (colorblind-safe in light and dark), hand-rolled SVG, no libraries.
 
 ## Project structure
@@ -81,13 +81,13 @@ Everything lives in your browser's `localStorage` — nothing ever leaves your m
 index.html            shell + script order
 manifest.webmanifest  PWA identity · sw.js — offline cache
 css/app.css           design tokens (light + dark) and all components
-js/store.js           state, persistence, modes/modules, the day-score engine (OD.goals)
+js/store.js           state, persistence, migrations, the day-score engine (OD.goals)
 js/seed.js            demo data (pro) + everyday starter (simple)
 js/ui.js              modals, forms, badges, toasts
-js/charts.js          columns, line, meter, funnel bars, day-dots
+js/charts.js          columns, line, meter, bars, day-dots
 js/palette.js         Ctrl+K command palette
 js/welcome.js         first-run choice
-js/views/             dashboard, projects, fitness, fuel, study, desk, ledger, pipeline, lab, settings
+js/views/             dashboard, tasks, fitness, fuel, study, lab, settings
 ```
 
 ## Roadmap ideas
@@ -95,7 +95,6 @@ js/views/             dashboard, projects, fitness, fuel, study, desk, ledger, p
 - Macro quick-fill from your last logged day
 - Per-exercise progression charts (pick a key lift, watch the line)
 - Weekly review card: "your week in one paragraph"
-- CSV import for the ledger
 
 ## License
 

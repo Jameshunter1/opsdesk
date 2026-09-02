@@ -1,164 +1,124 @@
 # OpsDesk user guide
 
-OpsDesk is a **local-first** app: everything you enter lives in your browser, on your machine. This guide walks through every module, the keyboard shortcuts, and how to keep your data safe.
+OpsDesk is a **local-first** app: everything you enter lives in your browser, on your machine. This guide walks through every module, the scoring engine, and how to keep your data safe.
 
+- [Where your data actually lives](#where-your-data-actually-lives)
 - [Two modes: Simple and Pro](#two-modes-simple-and-pro)
 - [Getting around](#getting-around)
 - [The 1% dashboard](#the-1-dashboard)
-- [Projects](#projects)
+- [Tasks](#tasks)
 - [Training](#training)
 - [Fuel](#fuel)
-- [Lab](#lab)
-- [Desk](#desk)
-- [Ledger](#ledger)
-- [Pipeline](#pipeline)
 - [Study](#study)
-- [Your data: backups, moving machines](#your-data)
+- [Lab](#lab)
+- [Backups & moving machines](#backups--moving-machines)
 - [Install it like an app](#install-it-like-an-app)
 - [FAQ](#faq)
 
 ---
 
+## Where your data actually lives
+
+Worth understanding once, because it's unusual (in a good way):
+
+- **GitHub Pages hosts the *code*** — static HTML, CSS, and JavaScript files. That's all the server ever serves; it cannot see, store, or receive your entries.
+- **Your *data* lives in your browser's `localStorage`**, on your device, under the key `opsdesk.v1` — one JSON document holding every log, habit, plan, and setting. Nothing is ever transmitted; you can verify with DevTools → Network while using the app.
+- **State management** is deliberately simple: every screen reads that one document and saves after every change, so there's no sync to break and no session to expire. A service worker caches the app itself, so it opens offline too.
+- The flip side: data is **per-browser, per-site**. Edge and Chrome are separate workspaces; the live site and a local copy are separate workspaces. The bridge between them is the backup file — see [Backups](#backups--moving-machines).
+
 ## Two modes: Simple and Pro
 
 On first run, OpsDesk asks what it should be for you:
 
-- **Simple** — plain everyday language. The sidebar reads *Home, To-dos, Money, Job hunt, Learning*. Money is recorded as **"I spent money," "I got paid,"** or **"I moved money"** — how much, on what, paid with, done. To-dos ask "What needs doing?" instead of showing ticket jargon, and the homelab module doesn't appear at all. You start with everyday accounts (Chequing, Credit card, Groceries…) and three worked examples you can delete.
-- **Pro** — the full IT-department experience: tickets with root causes, a double-entry ledger with a trial balance, the homelab tracker with its firewall matrix, and command drills. Starts loaded with a demo homelab to explore.
+- **Simple** — plain everyday language: *Home, Tasks, Workouts, Food, Learning*. To-dos ask "What needs doing?"; nothing assumes you're an IT person.
+- **Pro** — ops vocabulary (tickets, modules) plus the homelab Lab tab, loaded with demo data.
 
-**It's the same data underneath.** A simple-mode purchase is stored as a correct double-entry transaction, so nothing is lost switching between modes — change anytime in **Settings → Experience**, where you can also turn individual modules on or off (want Money and To-dos but no Job hunt? Untick it).
-
-![The simple money form](simple-money.png)
+Same data underneath; switch anytime in **Settings → Experience**, where you can also turn whole modules on or off.
 
 ## Getting around
 
-The sidebar is the map — in Pro mode **Dashboard → Lab → Desk → Ledger → Pipeline → Study**, in Simple mode **Home → To-dos → Money → Job hunt → Learning** — with Settings and the theme toggle at the bottom. The theme cycles System → Light → Dark. Modules you've turned off in Settings simply don't appear.
+Five tabs — **Dashboard, Tasks, Training, Fuel, Study** (+ Lab for homelabbers) — with Settings and the theme toggle at the bottom. Modules you've switched off simply don't appear.
 
-**The fastest way to anything is the command palette.** Press <kbd>Ctrl</kbd>+<kbd>K</kbd> (or <kbd>/</kbd>) and type. It searches every module at once — VM names, ticket text, KB lessons, transaction descriptions, companies, study topics, commands — and <kbd>Enter</kbd> jumps straight to the record. It also carries quick actions: type "new" to see *New ticket*, *New transaction*, *New VM*, *New application*, *New module*, and *Export backup*.
-
-| Key | Does |
-|---|---|
-| <kbd>Ctrl</kbd>+<kbd>K</kbd> or <kbd>/</kbd> | Open the command palette |
-| <kbd>↑</kbd> <kbd>↓</kbd> then <kbd>Enter</kbd> | Move and open in the palette |
-| <kbd>Esc</kbd> | Close any dialog |
-
-Everywhere in the app, **clicking a table row opens that record** for viewing or editing, and the buttons in the top-right corner create new records for the current module.
+The fastest way to anything is the command palette: <kbd>Ctrl</kbd>+<kbd>K</kbd> (or <kbd>/</kbd>) searches every record and carries quick actions — *Log today's food, Log workout, Weigh-in, Log study time, New project, Manage habits, Export backup*. <kbd>↑</kbd><kbd>↓</kbd> then <kbd>Enter</kbd>; <kbd>Esc</kbd> closes anything.
 
 ## The 1% dashboard
 
-The home screen runs on one idea: **get 1% better on the days you show up, and let it compound.**
+One idea: **get 1% better on the days you show up, and let it compound.**
 
 **How a day is scored — graded, mostly automatic:**
 
 | Component | Counts when… | Score (0–1 each) |
 |---|---|---|
-| Macros | you've made a food plan | Average of a calorie score and a protein score. Calories get full credit inside a goal-aware band (cutting tolerates under-eating to −20%, bulking tolerates over to +20%, ±10% otherwise) and fade toward 0 the further outside it you land. Protein is logged ÷ (90% of target), capped at 1 — extra protein is fine, not extra credit. |
-| Supplements | your list isn't empty | The fraction you ticked — 2 of 3 taken scores 0.67, not zero. |
-| Training | you've set a weekly routine | Planned day: 1 if a workout is logged. **Rest day: 1 automatically** — recovery is part of the plan. |
-| Study | you've set a daily minutes target | Minutes ÷ target — and overshooting pays a **bonus up to 1.25** (45 min against a 30-min target scores 1.25). |
-| **Habits** | your habit list isn't empty | **1 point each, checked off by hand** — the chips on the dashboard are tap-to-toggle. Manage the list via the *Habits* button (keep it short enough to be honest about). |
+| Macros | you've made a food plan | Average of a calorie score and a protein score. Calories get full credit inside a goal-aware band (cutting tolerates under-eating to −20%, bulking tolerates over to +20%, ±10% otherwise) and fade toward 0 the further outside you land. Protein is logged ÷ (90% of target), capped at 1. |
+| Supplements | your list isn't empty | The fraction you ticked — 2 of 3 taken scores 0.67. |
+| Training | you've set a weekly routine | Planned day: 1 if a workout is logged. **Rest day: 1 automatically.** |
+| Study | you've set a daily minutes target | Minutes ÷ target, with an overshoot **bonus up to 1.25**. |
+| Habits | your habit list isn't empty | **1 point each, tapped off by hand** — the chips on the dashboard toggle on click. Manage the list via the *Habits* button. |
 
-Numbers above and below target both matter: being close earns most of the point, blowing past a more-is-better target earns extra, and drifting far off fades smoothly instead of flipping to zero. Areas you haven't configured don't count, so nothing drags the score down while you're setting up.
+- **Green day** = your chosen share of points — the **green bar** in Settings: 50% *showing up*, 75% *solid*, or 100% *all or nothing*. Green days extend the **streak**.
+- **The compound curve is graded**: a kept day multiplies you by 1% × its score (×1.010 perfect, up to ×1.0125 with overshoot). Days under the bar never punish — they just don't multiply.
+- **Trends** (the compound curve and body weight) sit behind one toggle, collapsed by default. Numbers when you want them, calm when you don't.
+- **Next actions** shows one step per active project plus your top open to-dos; **Recent activity** merges everything you've logged.
 
-- **Green day** = your chosen share of the points — the **green bar** in Settings: *Showing up* (50%), *Solid* (75%), or *All or nothing* (100%). Green days extend your **streak**.
-- **The compound curve is graded too:** a kept day multiplies you by **1% × its score** — a perfect day is ×1.010, an overshoot day up to ×1.0125, a bare showed-up day still grows you a little. Days under the bar don't punish you; they just don't multiply.
-- **Next actions** shows one step per active project plus your top open to-dos — never the whole mountain.
-- Everything you log anywhere lands in the **activity feed**.
+## Tasks
 
-## Projects
+One tab answers "what should I do next?":
 
-A project is any outcome with more than one step: pass a cert, redo a resume, clear the garage. Give it a name, a one-line *why* (it shows up when motivation doesn't), and steps. OpsDesk always highlights the **next** unfinished step — on the project card and on the dashboard. Ticking a step logs the date and feeds the activity feed. Status: active / paused / done.
+- **Projects** — anything with more than one step. Each active project highlights exactly its **next** unfinished step (here and on the dashboard); tick steps off, add new ones inline, give it a one-line *why* for the days motivation doesn't show up.
+- **Loose to-dos** — numbered one-off items (`T-0001`, …) with priority and status: open → in progress → done. For problems, there's room for the symptom, the root cause, the fix, and the **lesson**.
+- **Solved & saved** — every finished item that has a lesson becomes a searchable article: your own answer book. The Study tab's *interview drill* deals these back as practice questions.
 
 ## Training
 
-- **Routine** — name each weekday (blank = rest) or tap a preset: Push/Pull/Legs, Upper/Lower ×4, Full body ×3. The week strip shows every day, today highlighted, checkmarks where you trained.
-- **Workouts** — *+ Log workout*: date, label (pre-filled with today's planned session), lifting or cardio. Lifting takes any number of exercise rows (name, sets, reps, weight); cardio takes minutes.
-- **PRs** — computed automatically: your best set per exercise with an estimated 1RM (Epley), sorted strongest first. Watch these climb — that's the clearest 1% there is.
-- **Weigh-ins** — quick entries in lb or kg (same scale, same time of day; the trend matters, single days don't). The trend line lives here and on the dashboard.
+- **Routine** — name each weekday (blank = rest) or tap a preset (Push/Pull/Legs, Upper/Lower ×4, Full body ×3). The week strip shows every day with checkmarks where you trained; rest days count as kept.
+- **Workouts** — date, label (pre-filled with today's planned session), lifting (any number of exercise rows: sets × reps × weight) or cardio (minutes).
+- **PRs** — best set per exercise with an estimated 1RM (Epley), computed automatically.
+- **Weigh-ins** — quick entries in lb or kg; the trend line is what matters, not single days.
 
 ## Fuel
 
-- **The plan maker** asks four things — body, age, height/weight, activity, goal — and computes daily calories (Mifflin-St Jeor × activity, then −20% to cut / +10% to build), protein (~0.8 g/lb), fat (25% of calories), carbs (the rest). Every number comes with a plain-words reason, and *Recalculate* is right there when your weight changes. Know your targets already? *Edit targets* sets them directly.
-- **The daily log** is one 20-second entry: protein, carbs, fat (calories compute themselves) plus a tick for each supplement on your list — creatine, vitamins, whatever you add. One log per day; click any day in the 14-day history to fix it.
-- **"On plan" is tolerant by design**: ±10% on calories and 90% on protein counts. Perfection kills streaks; good-enough compounds.
-
-## Dashboard (the ops cards)
-
-Below the 1% engine, the operational cards stay: six months of income vs. expenses, the job funnel, open tickets, and the merged activity feed. Modules you've turned off simply don't appear.
-
-On first run the app offers **sample data** so every screen demonstrates itself. Dismiss the banner and edit anything — or wipe it in **Settings**.
-
-## Lab
-
-Three registers that mirror how a segmented lab is actually designed:
-
-- **Network zones** — name, interface, subnet, gateway, DHCP range. WAN is treated as where the internet comes from, not a place rules originate.
-- **VM fleet** — OS, zone, IP, RAM/vCPU/disk, role, and a status: `running`, `stopped`, `planned`, or `template` (golden images that never join the lab network). The *RAM committed* tile totals what's running versus what the whole fleet would need — useful when the host has 16 GB and you run only what the current module needs.
-- **Firewall policy matrix** — the design-first heart of the Lab. Rows are source zones, columns are destinations plus Internet. Click a cell to set **allow / limited / block**; *limited* takes a port list (e.g. `80, 443, 53`). Every rule requires a **one-sentence reason**, shown on hover — if you can't explain a rule in one sentence, it isn't designed yet. Cells you haven't designed read `unset`, which means implicit default-deny.
-
-The matrix mirrors how pfSense evaluates traffic: rules decide who may *start* a conversation; the stateful firewall lets replies come back on their own.
-
-## Desk
-
-A personal service desk with two ticket types:
-
-- **Incidents** — something broke. Record the *symptom* (what it looked like), the *root cause* (the actual reason, not the first scary error line), the *fix*, and the **lesson** — the one-liner future-you needs.
-- **Tasks** — planned work, tracked with the same numbering.
-
-Tickets get sequential numbers (`T-0001`, …) and move **open → in-progress → resolved** (quick buttons in the ticket detail). 
-
-**The knowledge base builds itself:** every resolved ticket that has a lesson appears in the *Knowledge base* tab as an article — cause, fix, lesson — full-text searchable. This is the habit that turns troubleshooting into experience you can point at.
-
-## Ledger
-
-Real double-entry bookkeeping, not a budget toy:
-
-- **Accounts** have one of five types — *asset, liability, equity, income, expense* — following the accounting equation. Assets and expenses grow with debits; the other three grow with credits.
-- **Every transaction is one debit and one credit** of the same amount. Spending on the lab? Debit *Lab & hardware*, credit *Chequing* (or *Visa*). Payday? Debit *Chequing*, credit *Pay*. The form's hints say exactly this, and it refuses a transaction whose debit and credit are the same account.
-- **The trial balance proves it.** Total debits always equal total credits — the *balanced* badge is computed, not decorative.
-- **Export CSV** (top-right) writes every transaction to a file that opens cleanly in Excel, Google Sheets, or real accounting software.
-
-Balances are shown from each account's natural perspective, so a liability with money owing reads as a positive "you owe this," and a negative number always means something worth investigating.
-
-## Pipeline
-
-The job hunt as a funnel: **saved → applied → screening → interview → offer**, closing out as *accepted* or *rejected*.
-
-Each application records the company, role, source, posting URL, salary, and — the part that pays off later — **which resume version you used** and a **dated activity log**. Open an application and use *Log it* to note every call, email, and follow-up; use *Move to* to change stage (which also logs itself). The table sorts by last touch, so the application going stale is always visible.
+- **The plan maker** asks four things — body, age, height/weight, activity, goal — and computes daily calories (Mifflin-St Jeor × activity, then −20% to cut / +10% to build), protein (~0.8 g/lb), fat (25% of calories), carbs (the rest), each explained in plain words. *Recalculate* when your weight moves; *Edit targets* if you know your numbers.
+- **The daily log** is one 20-second entry: protein, carbs, fat (calories compute themselves) plus a tick per supplement — creatine, vitamins, whatever's on your editable list.
+- The 14-day history grades each day with the same math as the dashboard: *on plan*, *close · 74%*, *off plan*.
 
 ## Study
 
-Deliberate learning, four tools:
+Built for working toward more than one thing at once:
 
-- **Daily target + log** — set a minutes-per-day target you can hit on a *bad* day (20–30 min compounds), then *+ Log study* records sessions. Hitting the target earns the study point in your day score; the tiles show today and the last 7 days.
-- **Curriculum** — modules with a status, hours logged, topics, and a **proof of work**: the demonstrable thing that says it's done ("fresh clone to SSH prompt, timed"). Progress feeds the dashboard meter.
-- **Certifications** — planned / studying / scheduled / passed, with target dates.
-- **Command vault** — the "commands I know cold" list. **Command drill** shuffles the vault and quizzes you description-first. **Interview drill** goes one better: it deals your *resolved tickets* as behavioural-interview practice — say your answer out loud (situation, diagnosis, what you did, takeaway), then check it against your own write-up. Your homelab war stories become interview answers.
+- **Plans** — one card per track (*CompTIA Network+*, *CCNA*, *French*…), each with its own status, topic progress bar, minutes this week, and an **exam-date countdown**. Click a card to edit; deleting a plan keeps its topics and sessions, refiled under General.
+- **Topics** — the curriculum table, filterable by plan. Each topic carries status, hours, details, and a **proof of work**: the demonstrable thing that says it's done.
+- **The daily target** — one minutes-per-day number across all plans (pick one you can hit on a *bad* day). *+ Log study* records a session against a plan; hitting the target earns the study point, overshooting earns the bonus.
+- **Drills** — the command vault quiz (Pro), and the **interview drill** that turns your solved Tasks into behavioural-question practice.
+- **Certifications** — planned / studying / scheduled / passed, with dates.
 
-## Your data
+## Lab
 
-- Everything is stored in the browser's `localStorage` under the key `opsdesk.v1`. Nothing is sent anywhere, ever.
-- **Settings → Export backup** downloads the entire workspace as one JSON file. **Import backup** restores it (replacing what's there). Export before clearing browser data, switching browsers, or moving machines.
-- Storage is per-browser *and* per-site: the live site and a local copy are separate workspaces. Move between them with export/import.
-- **Reset to sample data** restores the demo homelab; **Start blank** gives an empty workspace. Both warn first.
+Homelab inventory for the IT-inclined: VM fleet (specs, zones, IPs, status, RAM-committed counter), network zones, and a firewall policy matrix where every rule needs a one-sentence reason and unset cells read as default-deny. Not your thing? Settings → untick Lab.
+
+## Backups & moving machines
+
+- **Settings → Export backup** downloads the entire workspace as one JSON file; **Import backup** restores it. Settings shows **when you last backed up** — glance at it now and then.
+- Export before clearing browser data (that's the one way to lose localStorage), before switching browsers or computers, and after any big data-entry session.
+- Two devices? No live sync by design (sync means servers and accounts). Export on one, import on the other.
+- If your workspace predates v3 and had Money or Job-hunt entries, they're preserved invisibly in an `archive` section of the document — they travel with your backups, and deleting that section from an exported file (or starting blank) purges them for good.
 
 ## Install it like an app
 
-From the live site, Chrome and Edge offer **Install** (the icon in the address bar, or menu → *Apps → Install OpsDesk*). You get a windowed app with its own icon, and a service worker keeps it working **offline** — fitting, since your data never needed the network in the first place.
+From the live site, Chrome and Edge offer **Install** (icon in the address bar). You get a windowed app with its own icon, working **offline** — fitting, since your data never needed the network in the first place.
 
 ## FAQ
 
-**Is my financial/job data visible to anyone?**
-No. There's no server and no telemetry — the page is static files. Data stays in your browser. (Verify it yourself: DevTools → Network.)
+**Is anything sent to GitHub?**
+Requests for the app files themselves (HTML/CSS/JS), nothing else. Your entries never leave the device — the code contains no analytics and no network calls.
 
 **I cleared my browser data and lost everything.**
-That's the one way to lose it — localStorage went with the cache. Restore from your exported JSON. If you don't have one: Settings → Export backup takes five seconds; make it a habit after big entries.
+That's the one failure mode. Restore from your exported JSON; if you don't have one, the last-backup line in Settings exists to make sure you will next time.
 
 **Can two devices share one workspace?**
-Not live — by design there's no sync server. Export on one, import on the other.
+Not live — export/import is the bridge.
 
-**The ticket numbers skip after I delete tickets.**
-Intentional: numbers are never reused, like a real ticketing system.
+**Where did Money and Job hunt go?**
+Removed in v3 to keep the app focused. Old entries are archived inside your data file (see Backups).
 
-**Why classic `<script>` tags instead of ES modules?**
-So the app runs from `file://` with a double-click, no server needed. Zero install is the feature; the shared `OD` namespace is the price, paid once.
+**Why classic `<script>` tags instead of a framework?**
+So the app runs from `file://` with a double-click, forever, with nothing to install or break. Zero dependencies is the feature.

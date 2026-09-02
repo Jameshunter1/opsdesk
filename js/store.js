@@ -6,7 +6,7 @@
 
   window.OD = window.OD || {};
   OD.views = OD.views || {};
-  OD.VERSION = "2.1.0";
+  OD.VERSION = "3.0.0";
 
   var KEY = "opsdesk.v1";
   var SCHEMA_VERSION = 1;
@@ -19,11 +19,9 @@
     ticketType: ["incident", "task"],
     ticketPriority: ["low", "medium", "high"],
     ticketArea: ["network", "virtualization", "windows", "linux", "hardware", "other"],
-    accountTypes: ["asset", "liability", "equity", "income", "expense"],
-    jobStatus: ["saved", "applied", "screening", "interview", "offer", "accepted", "rejected"],
-    jobFunnel: ["saved", "applied", "screening", "interview", "offer"],
     moduleStatus: ["todo", "active", "done"],
     certStatus: ["planned", "studying", "scheduled", "passed"],
+    planStatus: ["active", "paused", "done"],
     fwActions: ["allow", "limited", "block"]
   };
 
@@ -39,38 +37,9 @@
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   };
 
-  OD.monthKey = function (iso) { return (iso || "").slice(0, 7); };
-
-  /* Last n month keys ending at the current month, oldest first. */
-  OD.lastMonths = function (n) {
-    var out = [];
-    var d = new Date();
-    d.setDate(1);
-    for (var i = 0; i < n; i++) {
-      out.unshift(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"));
-      d.setMonth(d.getMonth() - 1);
-    }
-    return out;
-  };
-
   var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   OD.fmt = {
-    money: function (n) {
-      try {
-        return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(n);
-      } catch (e) {
-        return "$" + Number(n).toFixed(2);
-      }
-    },
-    moneyCompact: function (n) {
-      var abs = Math.abs(n);
-      var sign = n < 0 ? "-" : "";
-      if (abs >= 1000000) return sign + "$" + (abs / 1000000).toFixed(1) + "M";
-      if (abs >= 10000) return sign + "$" + Math.round(abs / 1000) + "K";
-      if (abs >= 1000) return sign + "$" + (abs / 1000).toFixed(1) + "K";
-      return sign + "$" + Math.round(abs);
-    },
     num: function (n) { return new Intl.NumberFormat("en-CA").format(n); },
     date: function (iso) {
       if (!iso) return "—";
@@ -102,13 +71,13 @@
     return !m || m[name] !== false;
   };
 
-  /* Plain-language names in simple mode; the IT-department names in pro. */
+  /* Plain-language names in simple mode; the ops names in pro. */
   OD.viewLabel = function (view) {
     if (OD.isSimple()) {
-      var simple = { dashboard: "Home", projects: "Projects", fitness: "Workouts", fuel: "Food", desk: "To-dos", ledger: "Money", pipeline: "Job hunt", study: "Learning", settings: "Settings", lab: "Lab" };
+      var simple = { dashboard: "Home", tasks: "Tasks", fitness: "Workouts", fuel: "Food", study: "Learning", settings: "Settings", lab: "Lab" };
       return simple[view] || view;
     }
-    var pro = { dashboard: "Dashboard", projects: "Projects", fitness: "Training", fuel: "Fuel", lab: "Lab", desk: "Desk", ledger: "Ledger", pipeline: "Pipeline", study: "Study", settings: "Settings" };
+    var pro = { dashboard: "Dashboard", tasks: "Tasks", fitness: "Training", fuel: "Fuel", study: "Study", lab: "Lab", settings: "Settings" };
     return pro[view] || view;
   };
 
@@ -120,7 +89,8 @@
       mode: "pro", onboarded: false,
       units: { weight: "lb" },
       greenThreshold: 0.5, // what fraction of the day's points keeps the day
-      modules: { projects: true, fitness: true, fuel: true, study: true, desk: true, ledger: true, pipeline: true, lab: true }
+      lastBackup: "",
+      modules: { tasks: true, fitness: true, fuel: true, study: true, lab: true }
     };
   }
 
@@ -141,13 +111,9 @@
       vms: [],
       rules: [],
       tickets: [],
-      accounts: [],
-      txns: [],
-      jobs: [],
       modules: [],
       certs: [],
       commands: [],
-      /* goals engine (v2) */
       projects: [],
       workouts: [],
       weighins: [],
@@ -157,6 +123,7 @@
       supps: [],
       studyPlan: { target: 0 },
       studyLogs: [],
+      plans: [],
       habits: defaultHabits(),
       habitChecks: {}
     };
@@ -164,7 +131,8 @@
 
   /* ---------- persistence ---------- */
 
-  /* Fill in any keys added by newer versions, without touching real data. */
+  /* Fill in any keys added by newer versions, without touching real data,
+     and migrate workspaces from older layouts forward. */
   function upgrade(db) {
     var fresh = blankDb();
     Object.keys(fresh).forEach(function (k) {
@@ -174,13 +142,42 @@
     Object.keys(s).forEach(function (k) {
       if (db.settings[k] === undefined) db.settings[k] = s[k];
     });
-    // nested defaults: new module keys and units for workspaces from older versions
+    var mods = db.settings.modules;
     Object.keys(s.modules).forEach(function (k) {
-      if (db.settings.modules[k] === undefined) db.settings.modules[k] = s.modules[k];
+      if (mods[k] === undefined) mods[k] = s.modules[k];
     });
     if (!db.settings.units || !db.settings.units.weight) db.settings.units = s.units;
     if (!db.routine || !db.routine.days) db.routine = { days: { 0: "", 1: "", 2: "", 3: "", 4: "", 5: "", 6: "" } };
     if (!db.studyPlan) db.studyPlan = { target: 0 };
+
+    /* v3: Projects + Desk merged into Tasks */
+    if (mods.projects !== undefined || mods.desk !== undefined) {
+      mods.tasks = mods.projects !== false || mods.desk !== false;
+      delete mods.projects;
+      delete mods.desk;
+    }
+
+    /* v3: Ledger and Pipeline removed from the app. Any real entries are
+       parked in db.archive (invisible, travels with backups) instead of
+       being silently destroyed — delete the archive key to purge for good. */
+    var hadMoney = (db.txns && db.txns.length) || (db.jobs && db.jobs.length);
+    if (hadMoney) {
+      db.archive = db.archive || {};
+      if (db.jobs && db.jobs.length) db.archive.jobs = db.jobs;
+      if (db.txns && db.txns.length) db.archive.txns = db.txns;
+      if (db.accounts && db.accounts.length) db.archive.accounts = db.accounts;
+      db.archive.archivedAt = db.archive.archivedAt || OD.todayISO();
+    }
+    delete db.jobs; delete db.txns; delete db.accounts;
+    delete mods.ledger; delete mods.pipeline;
+
+    /* v3: study plans — existing curriculum rows join a first plan */
+    if (db.modules.length && !db.plans.length && !db.modules.some(function (m) { return m.planId; })) {
+      var pid = OD.uid();
+      db.plans.push({ id: pid, name: "My study plan", status: "active", examDate: "" });
+      db.modules.forEach(function (m) { m.planId = pid; });
+      db.studyLogs.forEach(function (l) { if (!l.planId) l.planId = pid; });
+    }
     return db;
   }
 
@@ -195,7 +192,7 @@
           OD.db = blankDb();
         }
         // anyone with existing data predates the welcome screen — don't show it
-        if (raw && OD.db.settings.onboarded === false && (OD.db.tickets.length || OD.db.txns.length || OD.db.vms.length)) {
+        if (raw && OD.db.settings.onboarded === false && (OD.db.tickets.length || OD.db.vms.length || OD.db.workouts.length || OD.db.fuelLogs.length)) {
           OD.db.settings.onboarded = true;
         }
       } else {
@@ -215,6 +212,8 @@
 
     exportJson: function () {
       var stamp = OD.todayISO();
+      OD.db.settings.lastBackup = stamp;
+      OD.store.save();
       var blob = new Blob([JSON.stringify(OD.db, null, 2)], { type: "application/json" });
       var a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -275,48 +274,27 @@
       return "T-" + String(OD.db.counters.ticket).padStart(4, "0");
     },
 
-    accountById: function (id) {
-      return OD.db.accounts.find(function (a) { return a.id === id; }) || null;
-    },
-
-    accountName: function (id) {
-      var a = OD.query.accountById(id);
-      return a ? a.name : "?";
-    },
-
-    /* Signed balance per account: debits minus credits, then flipped for
-       credit-normal account types so every balance reads as a positive
-       "what this account holds / owes / earned / cost". */
-    accountBalance: function (id) {
-      var raw = 0;
-      OD.db.txns.forEach(function (t) {
-        if (t.debit === id) raw += t.amount;
-        if (t.credit === id) raw -= t.amount;
-      });
-      var a = OD.query.accountById(id);
-      if (a && (a.type === "liability" || a.type === "equity" || a.type === "income")) return -raw;
-      return raw;
-    },
-
-    /* Income and expense totals for one YYYY-MM key. */
-    monthFlows: function (key) {
-      var income = 0, expense = 0;
-      OD.db.txns.forEach(function (t) {
-        if (OD.monthKey(t.date) !== key) return;
-        var d = OD.query.accountById(t.debit);
-        var c = OD.query.accountById(t.credit);
-        if (c && c.type === "income") income += t.amount;
-        if (d && d.type === "expense") expense += t.amount;
-      });
-      return { income: income, expense: expense, net: income - expense };
-    },
-
     openTickets: function () {
       return OD.db.tickets.filter(function (t) { return t.status !== "resolved"; });
     },
 
-    activeJobs: function () {
-      return OD.db.jobs.filter(function (j) { return j.status !== "rejected" && j.status !== "accepted"; });
+    planById: function (id) {
+      return OD.db.plans.find(function (p) { return p.id === id; }) || null;
+    },
+
+    planName: function (id) {
+      var p = OD.query.planById(id);
+      return p ? p.name : "General";
+    },
+
+    /* minutes logged against one plan over the last n days (0 = all time) */
+    planMinutes: function (planId, days) {
+      var cutoff = days ? OD.goals.dayISO(-(days - 1)) : "";
+      return OD.db.studyLogs.reduce(function (sum, l) {
+        if (l.planId !== planId) return sum;
+        if (cutoff && l.date < cutoff) return sum;
+        return sum + (Number(l.minutes) || 0);
+      }, 0);
     }
   };
 

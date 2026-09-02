@@ -2,7 +2,7 @@
    Network-first with a cache fallback: always fresh when online, and the
    whole app still opens with no connection (data is in localStorage anyway).
    Bump VERSION on every release so old caches get swept. */
-var VERSION = "opsdesk-v2.1.0";
+var VERSION = "opsdesk-v3.0.0";
 
 self.addEventListener("install", function () {
   self.skipWaiting();
