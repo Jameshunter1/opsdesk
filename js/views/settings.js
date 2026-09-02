@@ -53,6 +53,12 @@
         '<option value="pro"' + (s.mode !== "simple" ? " selected" : "") + ">Pro — IT-department terms (tickets, ledger, debits)</option>" +
         "</select>" +
         '<span class="hint">Same data underneath either way — switch freely.</span></div>' +
+        '<div class="field"><label for="set-green">What keeps a day green? (extends streaks, bends the curve)</label>' +
+        '<select class="control" id="set-green">' +
+        '<option value="0.5"' + (OD.goals.greenBar() === 0.5 ? " selected" : "") + ">Showing up — 50% of points</option>" +
+        '<option value="0.75"' + (OD.goals.greenBar() === 0.75 ? " selected" : "") + ">Solid — 75% of points</option>" +
+        '<option value="1"' + (OD.goals.greenBar() === 1 ? " selected" : "") + ">All or nothing — 100%</option>" +
+        "</select></div>" +
         '<div class="field"><label>What do you want to track?</label>' + moduleChecks + "</div>" +
         "</div></div>" +
 
@@ -86,6 +92,7 @@
         s.name = el.querySelector("#set-name").value.trim();
         s.theme = el.querySelector("#set-theme").value;
         s.mode = el.querySelector("#set-mode").value;
+        s.greenThreshold = Number(el.querySelector("#set-green").value) || 0.5;
         s.modules = s.modules || {};
         el.querySelectorAll("[data-module]").forEach(function (cb) {
           s.modules[cb.getAttribute("data-module")] = cb.checked;

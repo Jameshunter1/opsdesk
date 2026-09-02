@@ -48,23 +48,22 @@ Everywhere in the app, **clicking a table row opens that record** for viewing or
 
 The home screen runs on one idea: **get 1% better on the days you show up, and let it compound.**
 
-**How a day is scored — automatically, from your logs:**
+**How a day is scored — graded, mostly automatic:**
 
-| Component | Counts when… | Earned when… |
+| Component | Counts when… | Score (0–1 each) |
 |---|---|---|
-| Macros | you've made a food plan | day logged, calories within ±10% of target, protein ≥ 90% |
-| Supplements | your supplement list isn't empty | every one ticked in that day's food log |
-| Training | you've set a weekly routine | planned day → a workout is logged; **rest day → kept automatically** |
-| Study | you've set a daily minutes target | logged minutes reach the target |
+| Macros | you've made a food plan | Average of a calorie score and a protein score. Calories get full credit inside a goal-aware band (cutting tolerates under-eating to −20%, bulking tolerates over to +20%, ±10% otherwise) and fade toward 0 the further outside it you land. Protein is logged ÷ (90% of target), capped at 1 — extra protein is fine, not extra credit. |
+| Supplements | your list isn't empty | The fraction you ticked — 2 of 3 taken scores 0.67, not zero. |
+| Training | you've set a weekly routine | Planned day: 1 if a workout is logged. **Rest day: 1 automatically** — recovery is part of the plan. |
+| Study | you've set a daily minutes target | Minutes ÷ target — and overshooting pays a **bonus up to 1.25** (45 min against a 30-min target scores 1.25). |
+| **Habits** | your habit list isn't empty | **1 point each, checked off by hand** — the chips on the dashboard are tap-to-toggle. Manage the list via the *Habits* button (keep it short enough to be honest about). |
 
-There is deliberately **no "mark day complete" button** — you log real things and the score derives itself, so the app can't nag and you can't fudge. Areas you haven't configured simply don't count, so nothing drags the score down while you're setting up.
+Numbers above and below target both matter: being close earns most of the point, blowing past a more-is-better target earns extra, and drifting far off fades smoothly instead of flipping to zero. Areas you haven't configured don't count, so nothing drags the score down while you're setting up.
 
-- **Green day** = 75%+ of your points → it extends your **streak** and multiplies the **compound curve** by ×1.01.
-- **Missed days don't punish you** — they just don't multiply. Streaks count through yesterday; today is always "in progress".
+- **Green day** = your chosen share of the points — the **green bar** in Settings: *Showing up* (50%), *Solid* (75%), or *All or nothing* (100%). Green days extend your **streak**.
+- **The compound curve is graded too:** a kept day multiplies you by **1% × its score** — a perfect day is ×1.010, an overshoot day up to ×1.0125, a bare showed-up day still grows you a little. Days under the bar don't punish you; they just don't multiply.
 - **Next actions** shows one step per active project plus your top open to-dos — never the whole mountain.
 - Everything you log anywhere lands in the **activity feed**.
-
-If nothing is configured yet, the dashboard shows three setup buttons (food plan, routine, study target) and gets out of the way.
 
 ## Projects
 

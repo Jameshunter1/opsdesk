@@ -285,6 +285,21 @@
       weighins.push({ id: id(), date: daysAgo(wk * 7), weightKg: Math.round((82 + wk * 0.28 + (wk % 2 ? 0.15 : -0.1)) * 10) / 10 });
     }
 
+    var habits = [
+      { id: id(), name: "Steps / daily walk" },
+      { id: id(), name: "In bed on time" },
+      { id: id(), name: "Enough water" }
+    ];
+    var habitChecks = {};
+    for (var hd = 1; hd <= 12; hd++) {
+      var hIso = daysAgo(hd);
+      habitChecks[hIso] = {};
+      habits.forEach(function (h, hx) {
+        var miss = (hd === 2 && hx === 1) || (hd === 5 && hx === 2) || (hd === 7 && hx !== 2);
+        if (!miss) habitChecks[hIso][h.id] = true;
+      });
+    }
+
     var studyPlan = { target: 30 };
     var studyLogs = [];
     var TOPICS = ["Subnetting drills", "OSI layers review", "Ports & protocols flashcards", "Practice exam block", "Wireless standards", "Routing concepts"];
@@ -331,6 +346,8 @@
       supps: supps,
       studyPlan: studyPlan,
       studyLogs: studyLogs,
+      habits: habits,
+      habitChecks: habitChecks,
       zones: zones,
       vms: vms,
       rules: rules,
@@ -418,7 +435,13 @@
       fuelLogs: [],
       supps: [],
       studyPlan: { target: 0 },
-      studyLogs: []
+      studyLogs: [],
+      habits: [
+        { id: id(), name: "Steps / daily walk" },
+        { id: id(), name: "In bed on time" },
+        { id: id(), name: "Enough water" }
+      ],
+      habitChecks: {}
     };
   };
 })();

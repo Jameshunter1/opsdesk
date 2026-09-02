@@ -6,7 +6,7 @@
 
   window.OD = window.OD || {};
   OD.views = OD.views || {};
-  OD.VERSION = "2.0.0";
+  OD.VERSION = "2.1.0";
 
   var KEY = "opsdesk.v1";
   var SCHEMA_VERSION = 1;
@@ -119,8 +119,17 @@
       name: "", theme: "auto", seeded: false, bannerDismissed: false,
       mode: "pro", onboarded: false,
       units: { weight: "lb" },
+      greenThreshold: 0.5, // what fraction of the day's points keeps the day
       modules: { projects: true, fitness: true, fuel: true, study: true, desk: true, ledger: true, pipeline: true, lab: true }
     };
+  }
+
+  function defaultHabits() {
+    return [
+      { id: OD.uid(), name: "Steps / daily walk" },
+      { id: OD.uid(), name: "In bed on time" },
+      { id: OD.uid(), name: "Enough water" }
+    ];
   }
 
   function blankDb() {
@@ -147,7 +156,9 @@
       fuelLogs: [],
       supps: [],
       studyPlan: { target: 0 },
-      studyLogs: []
+      studyLogs: [],
+      habits: defaultHabits(),
+      habitChecks: {}
     };
   }
 
@@ -354,34 +365,81 @@
       return ((OD.db.routine.days || {})[OD.goals.weekdayOf(iso)] || "").trim();
     },
 
-    /* The auto day score. Each configured component earns 1 point:
-         fuel   — logged, calories within ±10% of target, protein ≥ 90% of target
-         supps  — every supplement on the list ticked in that day's log
-         train  — planned day: a workout logged; rest day: kept by default
-         study  — minutes logged ≥ the daily target
-       Components only count when their module is on and configured, so an
-       unconfigured area never drags the score down. */
+    /* ---------- habits (checked by hand, scored like everything else) ---------- */
+
+    habitChecked: function (iso, habitId) {
+      var day = OD.db.habitChecks[iso];
+      return !!(day && day[habitId]);
+    },
+    toggleHabit: function (iso, habitId) {
+      var checks = OD.db.habitChecks;
+      if (!checks[iso]) checks[iso] = {};
+      if (checks[iso][habitId]) delete checks[iso][habitId];
+      else checks[iso][habitId] = true;
+    },
+
+    greenBar: function () {
+      var g = OD.db.settings.greenThreshold;
+      return typeof g === "number" ? g : 0.5;
+    },
+
+    /* The auto day score — GRADED, not pass/fail. Each configured component
+       contributes 0–1 (study can overshoot to 1.25), so being near target
+       earns near-full credit and blowing past a more-is-better target earns
+       a bonus. Components only count when configured, so an untouched area
+       never drags the score down.
+
+         macros — average of a calorie score and a protein score.
+                  Calories: full credit inside a goal-aware band (cutting
+                  tolerates under-eating, bulking tolerates over), fading
+                  linearly to 0 by 35% outside it. Protein: logged/90%-of-
+                  target, capped at 1 (extra protein is fine, not extra credit).
+         supps  — the fraction of your list you ticked (2 of 3 = 0.67).
+         train  — planned day: 1 if you logged a workout; rest day: 1.
+         study  — minutes/target, with overshoot credited up to 1.25.
+         habits — 1 point each, checked off by hand on the dashboard. */
+    /* Graded macro score for one day's log against the plan — shared by the
+       day score and the Fuel history badges. */
+    macroScore: function (log) {
+      function clamp01(n) { return Math.max(0, Math.min(1, n)); }
+      if (!log || !OD.db.fuelPlan) return { score: 0, detail: "not logged" };
+      var t = OD.db.fuelPlan;
+      var kcal = OD.goals.kcalOf(log);
+      var dev = (kcal - t.kcal) / t.kcal;
+      var goal = (t.stats && t.stats.goal) || "maintain";
+      var lo = goal === "cut" ? -0.2 : -0.1;   // cutting: under-eating tolerated
+      var hi = goal === "gain" ? 0.2 : 0.1;    // bulking: over-eating tolerated
+      var calScore = 1;
+      if (dev < lo) calScore = clamp01(1 - (lo - dev) / 0.35);
+      else if (dev > hi) calScore = clamp01(1 - (dev - hi) / 0.35);
+      var proteinScore = clamp01((Number(log.protein) || 0) / (t.protein * 0.9));
+      return {
+        score: (calScore + proteinScore) / 2,
+        calScore: calScore,
+        proteinScore: proteinScore,
+        kcal: kcal,
+        detail: kcal + " kcal · " + (Number(log.protein) || 0) + " g"
+      };
+    },
+
     dayScore: function (iso) {
       var possible = 0, earned = 0, parts = [];
 
       if (OD.moduleOn("fuel") && OD.db.fuelPlan) {
         possible++;
         var log = OD.goals.fuelLogFor(iso);
-        var hit = false;
-        if (log) {
-          var kcal = OD.goals.kcalOf(log);
-          var t = OD.db.fuelPlan;
-          hit = Math.abs(kcal - t.kcal) <= t.kcal * 0.1 && (Number(log.protein) || 0) >= t.protein * 0.9;
-        }
-        if (hit) earned++;
-        parts.push({ key: "fuel", label: "Macros", ok: hit, detail: log ? "logged" : "not logged" });
+        var m = OD.goals.macroScore(log);
+        earned += m.score;
+        parts.push({ key: "fuel", label: "Macros", score: m.score, ok: m.score >= 0.99, detail: m.detail });
       }
 
       if (OD.moduleOn("fuel") && OD.db.supps.length) {
         possible++;
-        var taken = OD.goals.suppsAllTaken(OD.goals.fuelLogFor(iso));
-        if (taken) earned++;
-        parts.push({ key: "supps", label: "Supplements", ok: taken });
+        var logS = OD.goals.fuelLogFor(iso);
+        var taken = OD.db.supps.filter(function (x) { return logS && logS.supps && logS.supps[x.id]; }).length;
+        var frac = taken / OD.db.supps.length;
+        earned += frac;
+        parts.push({ key: "supps", label: "Supplements", score: frac, ok: frac >= 0.99, detail: taken + " of " + OD.db.supps.length });
       }
 
       if (OD.moduleOn("fitness")) {
@@ -390,32 +448,39 @@
           var planned = OD.goals.plannedLabel(iso);
           var isRest = !planned || /^rest$/i.test(planned);
           var worked = OD.goals.workoutsOn(iso).length > 0;
-          var kept = isRest ? true : worked;
-          if (kept) earned++;
-          parts.push({ key: "train", label: isRest ? "Rest day" : planned, ok: kept, detail: isRest ? "recovery counts" : (worked ? "trained" : "not yet") });
+          var sT = isRest ? 1 : (worked ? 1 : 0);
+          earned += sT;
+          parts.push({ key: "train", label: isRest ? "Rest day" : planned, score: sT, ok: sT >= 0.99, detail: isRest ? "recovery counts" : (worked ? "trained" : "not yet") });
         } else if (OD.goals.workoutsOn(iso).length) {
           possible++; earned++;
-          parts.push({ key: "train", label: "Trained", ok: true });
+          parts.push({ key: "train", label: "Trained", score: 1, ok: true });
         }
       }
 
       if (OD.moduleOn("study") && (OD.db.studyPlan.target || 0) > 0) {
         possible++;
         var mins = OD.goals.studyMinutes(iso);
-        var okS = mins >= OD.db.studyPlan.target;
-        if (okS) earned++;
-        parts.push({ key: "study", label: "Study " + OD.db.studyPlan.target + " min", ok: okS, detail: mins + " min" });
+        var sS = Math.min(mins / OD.db.studyPlan.target, 1.25); // overshoot pays, capped
+        earned += sS;
+        parts.push({ key: "study", label: "Study " + OD.db.studyPlan.target + " min", score: sS, ok: sS >= 0.99, detail: mins + " min" });
       }
+
+      OD.db.habits.forEach(function (h) {
+        possible++;
+        var done = OD.goals.habitChecked(iso, h.id);
+        if (done) earned++;
+        parts.push({ key: "habit", habitId: h.id, label: h.name, score: done ? 1 : 0, ok: done, detail: done ? "" : "tap to check off" });
+      });
 
       return { possible: possible, earned: earned, ratio: possible ? earned / possible : 0, parts: parts };
     },
 
-    /* good ≥ 75% kept · warn = something kept · off = nothing tracked/kept */
+    /* green ≥ your bar (Settings) · warn = partial · off = nothing tracked */
     dayTone: function (iso) {
       var s = OD.goals.dayScore(iso);
       if (!s.possible) return "off";
-      if (s.ratio >= 0.75) return "good";
-      if (s.earned > 0) return "warn";
+      if (s.ratio >= OD.goals.greenBar()) return "good";
+      if (s.earned > 0.1) return "warn";
       return "off";
     },
 
@@ -429,11 +494,16 @@
       return n;
     },
 
-    /* the compounding curve: every kept day multiplies you by 1.01 */
+    /* The compounding curve, graded: a kept day multiplies you by
+       1 + 1% × its score — so a 100% day is ×1.010, an overshoot day up to
+       ×1.0125, a bare "showed up" day still grows you a little. Days under
+       the bar don't punish you; they just don't multiply. */
     compound: function (days) {
       var out = [], value = 1;
+      var bar = OD.goals.greenBar();
       for (var i = days - 1; i >= 1; i--) {
-        if (OD.goals.dayTone(OD.goals.dayISO(-i)) === "good") value *= 1.01;
+        var s = OD.goals.dayScore(OD.goals.dayISO(-i));
+        if (s.possible && s.ratio >= bar) value *= 1 + 0.01 * Math.min(s.ratio, 1.25);
         out.push({ date: OD.goals.dayISO(-i), value: value });
       }
       out.push({ date: OD.goals.dayISO(0), value: value });

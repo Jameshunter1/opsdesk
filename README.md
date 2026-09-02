@@ -16,10 +16,11 @@ Projects, training, food & supplements, study, money, job hunt, even a homelab �
 
 The dashboard is built on a simple theory: **improve 1% on the days you show up, and let it compound.**
 
-- **Today's 1%** — each configured area contributes one point: macros in range (±10% calories, protein ≥ 90%), all supplements taken, workout done *on a planned day*, study minutes hit. Scored entirely from your logs — nothing extra to tick, so it can't nag.
+- **Today's 1% — graded, not pass/fail.** Each configured area scores 0–1: macros by how close you landed to target (goal-aware — cutting tolerates under-eating, bulking tolerates over), supplements by the fraction taken, training by showing up on planned days, study by minutes vs. target **with a bonus for overshooting** (up to 1.25). Near the target earns near-full credit; drifting off fades smoothly instead of snapping to zero.
+- **Habits — the part you check off yourself.** Daily habits (steps, bedtime, water — your list) are one point each, tap-to-toggle right on the dashboard, and count in the score like everything else.
 - **Rest days count as kept.** Recovery is part of the plan, not a miss.
-- **Consistency strip** — the last 14 days as dots; green = kept (75%+ of your points).
-- **The compound curve** — every kept day multiplies you by ×1.01. Missed days don't punish you; they just don't multiply. Watching that curve bend is the whole motivation model.
+- **Your green bar, your call** — a day is "kept" at 50% (*showing up*), 75% (*solid*), or 100% (*all or nothing*), set in Settings. Kept days extend the streak.
+- **The compound curve is graded too** — a kept day multiplies you by 1% × its score: ×1.010 for a perfect day, up to ×1.0125 with overshoot, a little even for a bare showed-up day. Missed days don't punish you; they just don't multiply.
 - **Only what you configure counts.** No food plan? Fuel doesn't score. No routine? Training only scores when you log something. Guidance without micromanagement.
 
 ## The departments

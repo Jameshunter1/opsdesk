@@ -533,6 +533,9 @@ select.control { max-width: 100%; }
   color: var(--muted);
 }
 .score-chip.ok { color: var(--good-text); background: var(--accent-soft); }
+.score-chip.mid { border-color: var(--warning); color: var(--ink-2); }
+button.habit-chip { cursor: pointer; font: inherit; font-size: 12.5px; }
+button.habit-chip:hover { border-color: var(--accent); color: var(--ink); }
 
 .dotrow { display: flex; gap: 6px; flex-wrap: wrap; }
 .daydot { width: 16px; height: 16px; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--border); }

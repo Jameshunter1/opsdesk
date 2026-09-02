@@ -52,6 +52,49 @@
     return items.slice(0, 9);
   }
 
+  /* Habit list manager — rename, add, remove. Checks live on the day chips. */
+  function habitsManager() {
+    function row(h) {
+      return '<div class="row" style="margin-bottom:8px" data-habit-row="' + esc(h.id) + '">' +
+        '<input class="control" data-habit-name value="' + esc(h.name) + '" style="flex:1">' +
+        '<button class="btn sm ghost" data-habit-del type="button" title="Remove">×</button></div>';
+    }
+    var m = OD.ui.openModal(
+      OD.ui.modalHead("Daily habits") +
+      '<p class="subtle">Each habit is one point in your day, checked off by hand on the dashboard. Keep the list short enough to be honest about.</p>' +
+      '<div id="habit-rows" style="margin-top:12px">' + OD.db.habits.map(row).join("") + "</div>" +
+      '<button class="btn sm" id="habit-add" type="button">+ Add habit</button>' +
+      '<div class="modal-actions"><button class="btn" data-act="cancel" type="button">Cancel</button>' +
+      '<button class="btn primary" data-act="save" type="button">Save</button></div>',
+      true
+    );
+    var rows = m.querySelector("#habit-rows");
+    function wire(r) {
+      r.querySelector("[data-habit-del]").addEventListener("click", function () { r.remove(); });
+    }
+    rows.querySelectorAll("[data-habit-row]").forEach(wire);
+    m.querySelector("#habit-add").addEventListener("click", function () {
+      var id = OD.uid();
+      rows.insertAdjacentHTML("beforeend", row({ id: id, name: "" }));
+      var r = rows.lastElementChild;
+      wire(r);
+      r.querySelector("[data-habit-name]").focus();
+    });
+    m.querySelector('[data-act="cancel"]').addEventListener("click", OD.ui.closeModal);
+    m.querySelector('[data-act="save"]').addEventListener("click", function () {
+      var out = [];
+      rows.querySelectorAll("[data-habit-row]").forEach(function (r) {
+        var name = r.querySelector("[data-habit-name]").value.trim();
+        if (name) out.push({ id: r.getAttribute("data-habit-row"), name: name });
+      });
+      OD.db.habits = out;
+      OD.store.save();
+      OD.ui.closeModal();
+      OD.app.refresh();
+      OD.ui.toast(out.length ? "Habits saved — they score one point each." : "No habits — the score runs on your logs alone.");
+    });
+  }
+
   function bestStreak(days) {
     var best = 0, run = 0;
     for (var i = days; i >= 1; i--) {
@@ -99,28 +142,45 @@
           "</div></div>";
       } else {
         var pctToday = Math.round(score.ratio * 100);
+        var barPct = Math.round(OD.goals.greenBar() * 100);
         var streak = OD.goals.streak();
         var best = bestStreak(180);
 
         var chips = score.parts.map(function (p) {
-          return '<span class="score-chip' + (p.ok ? " ok" : "") + '">' + (p.ok ? "✓ " : "· ") + esc(p.label) +
-            (p.detail && !p.ok ? ' <span class="hint">· ' + esc(p.detail) + "</span>" : "") + "</span>";
+          var cls = "score-chip" + (p.ok ? " ok" : p.score > 0.1 ? " mid" : "");
+          var icon = p.ok ? "✓ " : p.score > 0.1 ? "◐ " : "· ";
+          var extra = "";
+          if (p.score > 1.001) extra = ' <span class="hint">· +' + Math.round((p.score - 1) * 100) + "% bonus</span>";
+          else if (p.detail && !p.ok) extra = ' <span class="hint">· ' + esc(p.detail) + "</span>";
+          else if (p.ok && p.detail && p.key !== "habit") extra = ' <span class="hint">· ' + esc(p.detail) + "</span>";
+          var inner = icon + esc(p.label) + extra;
+          if (p.key === "habit") {
+            return '<button type="button" class="' + cls + ' habit-chip" data-habit="' + esc(p.habitId) + '" title="Tap to toggle">' + inner + "</button>";
+          }
+          return '<span class="' + cls + '">' + inner + "</span>";
         }).join("");
+
+        var missing = [];
+        if (OD.moduleOn("fuel") && !db.fuelPlan) missing.push('<a href="#/fuel">food plan</a>');
+        if (OD.moduleOn("fitness") && !OD.goals.routineActive()) missing.push('<a href="#/fitness">workout routine</a>');
+        if (OD.moduleOn("study") && !(db.studyPlan.target > 0)) missing.push('<a href="#/study">study target</a>');
 
         var dots = [];
         for (var i = 13; i >= 0; i--) {
           var dIso = OD.goals.dayISO(-i);
-          var tone = i === 0 ? (score.ratio >= 0.75 ? "good" : score.earned > 0 ? "warn" : "off") : OD.goals.dayTone(dIso);
           var s2 = i === 0 ? score : OD.goals.dayScore(dIso);
-          dots.push({ tone: tone, title: OD.fmt.date(dIso) + " — " + s2.earned + "/" + s2.possible + (i === 0 ? " so far" : "") });
+          var tone = !s2.possible ? "off" : s2.ratio >= OD.goals.greenBar() ? "good" : s2.earned > 0.1 ? "warn" : "off";
+          dots.push({ tone: tone, title: OD.fmt.date(dIso) + " — " + Math.round(s2.ratio * 100) + "%" + (i === 0 ? " so far" : "") });
         }
 
         html += '<div class="grid grid-2">' +
-          '<div class="card"><div class="card-title">Today’s 1%</div>' +
-          '<div class="score-big">' + score.earned + '<small> of ' + score.possible + "</small></div>" +
+          '<div class="card"><div class="card-title">Today’s 1% ' +
+          '<button class="btn sm ghost right" id="manage-habits" type="button">Habits</button></div>' +
+          '<div class="score-big">' + pctToday + '%<small> · ' + (Math.round(score.earned * 10) / 10) + " of " + score.possible + " pts</small></div>" +
           '<div style="margin:8px 0 12px">' + OD.charts.meter(pctToday) + "</div>" +
           '<div class="score-chips">' + chips + "</div>" +
-          '<p class="hint" style="margin-top:10px">Scored automatically from your logs — nothing extra to tick.</p></div>' +
+          '<p class="hint" style="margin-top:10px">Graded from your logs — near target earns near-full credit, overshooting a more-is-better target earns a bonus. Habit chips are tap-to-check.' +
+          (missing.length ? " Add more signal: " + missing.join(" · ") + "." : "") + "</p></div>" +
 
           '<div class="card"><div class="card-title">Consistency</div>' +
           '<div class="row" style="gap:22px;align-items:baseline">' +
@@ -128,12 +188,12 @@
           '<div class="hint">best ' + best + " in the last 6 months</div></div>" +
           "</div>" +
           '<div style="margin-top:14px">' + OD.charts.dayDots(dots) + "</div>" +
-          '<p class="hint" style="margin-top:8px">Last 14 days · green = kept (75%+) · a kept day multiplies you by 1.01</p></div>' +
+          '<p class="hint" style="margin-top:8px">Last 14 days · green = kept (' + barPct + '%+ of points, set in Settings)</p></div>' +
           "</div>";
 
         /* compounding + weight */
         var trendCards = '<div class="card"><div class="card-title">The compound curve — 90 days</div><div id="dash-compound"></div>' +
-          '<p class="hint" style="margin-top:8px">Every green day ×1.01. Missed days don’t punish you — they just don’t multiply.</p></div>';
+          '<p class="hint" style="margin-top:8px">A kept day multiplies you by 1% × its score — a perfect day is ×1.010, an overshoot day up to ×1.0125. Days under the bar don’t punish you; they just don’t multiply.</p></div>';
         if (OD.moduleOn("fitness")) {
           trendCards += '<div class="card"><div class="card-title">Body weight</div><div id="dash-weight"></div></div>';
         }
@@ -258,6 +318,17 @@
       el.querySelectorAll("[data-goto]").forEach(function (r) {
         r.addEventListener("click", function () { location.hash = r.getAttribute("data-goto"); });
       });
+      var manage = el.querySelector("#manage-habits");
+      if (manage) manage.addEventListener("click", habitsManager);
+      el.querySelectorAll("[data-habit]").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          OD.goals.toggleHabit(OD.todayISO(), chip.getAttribute("data-habit"));
+          OD.store.save();
+          OD.app.refresh();
+        });
+      });
     }
   };
+
+  OD.views.dashboard.manageHabits = habitsManager;
 })();

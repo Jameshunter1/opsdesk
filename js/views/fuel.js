@@ -261,14 +261,22 @@
         var l = OD.goals.fuelLogFor(d);
         if (!l && i > 0) continue;
         var kcal = l ? OD.goals.kcalOf(l) : 0;
-        var onPlan = plan && l && Math.abs(kcal - plan.kcal) <= plan.kcal * 0.1 && Number(l.protein) >= plan.protein * 0.9;
+        var statusBadge;
+        if (!l) statusBadge = OD.ui.badge("not logged", "plain");
+        else if (!plan) statusBadge = OD.ui.badge("logged", "accent");
+        else {
+          var ms = OD.goals.macroScore(l);
+          statusBadge = ms.score >= 0.99 ? OD.ui.badge("on plan", "good")
+            : ms.score >= 0.5 ? OD.ui.badge("close · " + Math.round(ms.score * 100) + "%", "warning")
+            : OD.ui.badge("off plan · " + Math.round(ms.score * 100) + "%", "plain");
+        }
         histRows += '<tr class="clickable" data-log-date="' + d + '">' +
           "<td>" + esc(OD.fmt.date(d)) + (i === 0 ? ' <span class="hint">today</span>' : "") + "</td>" +
           '<td class="num">' + (l ? esc(OD.fmt.num(kcal)) : "—") + "</td>" +
           '<td class="num">' + (l ? esc(l.protein) : "—") + "</td>" +
           '<td class="num">' + (l ? esc(l.carbs) : "—") + "</td>" +
           '<td class="num">' + (l ? esc(l.fat) : "—") + "</td>" +
-          "<td>" + (l ? (plan ? OD.ui.badge(onPlan ? "on plan" : "logged", onPlan ? "good" : "warning") : OD.ui.badge("logged", "accent")) : OD.ui.badge("not logged", "plain")) + "</td></tr>";
+          "<td>" + statusBadge + "</td></tr>";
       }
 
       html += '<div class="grid grid-2 section-gap">' +

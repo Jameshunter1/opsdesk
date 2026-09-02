@@ -2,6 +2,19 @@
 
 All notable changes to OpsDesk. Versions follow [semver](https://semver.org); the data schema is versioned separately (currently v1) and only changes when stored data would need migration.
 
+## 2.1.0 — 2026-09-02
+
+The score learns nuance: check-off habits join the calculation, and being over or under target now **adjusts the score accordingly** instead of pass/fail.
+
+### Added
+- **Daily habits** — your own check-off goals (seeded with steps / bedtime / water), one point each, tap-to-toggle chips on the dashboard, managed via the *Habits* button or the command palette. Checks are part of the day score and the compound curve.
+- **Green bar setting** — choose what keeps a day: 50% *showing up* (new default), 75% *solid*, or 100% *all or nothing*.
+
+### Changed
+- **Graded scoring.** Every component now scores 0–1 instead of hit/miss: calories earn full credit inside a goal-aware band (cutting tolerates under-eating, bulking over-eating) and fade linearly outside it; protein scores logged ÷ 90%-of-target; supplements score the fraction taken (2 of 3 = 0.67); study scores minutes ÷ target **with an overshoot bonus up to 1.25**.
+- **Graded compounding.** A kept day multiplies by 1% × its score (×1.010 perfect, ×1.0125 max overshoot) rather than a flat ×1.01. Days under the bar still never punish.
+- Today's score displays as a percentage with fractional points; chips show ✓ / ◐ / · states with live numbers; Fuel's history badges use the same graded macro score ("on plan" / "close · 74%" / "off plan").
+
 ## 2.0.0 — 2026-09-02
 
 OpsDesk grows from an IT-life tracker into a **goals engine** built on the 1%-per-day theory: projects, training, food, and study flow into one dashboard that scores every day automatically from what you log — guidance without micromanagement.
