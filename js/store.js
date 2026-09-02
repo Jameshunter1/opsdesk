@@ -6,7 +6,7 @@
 
   window.OD = window.OD || {};
   OD.views = OD.views || {};
-  OD.VERSION = "3.1.0";
+  OD.VERSION = "3.2.0";
 
   var KEY = "opsdesk.v1";
   var SCHEMA_VERSION = 1;

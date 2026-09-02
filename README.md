@@ -67,7 +67,7 @@ Then: make a food plan (Fuel), set a routine (Training), set a study target (Stu
 
 Everything lives in your browser's `localStorage` — by default nothing ever leaves your machine (the page is static files; check the network tab). **Settings → Export backup** produces one JSON file with your whole world; import restores it.
 
-**Want it on every device?** Connect a free Supabase project (5-minute setup, [guide here](docs/guide.md#use-it-on-all-your-devices-account--sync)) and create an account in **Settings → Account & sync**: your workspace syncs to a Postgres row that row-level security scopes to you alone. Local-first stays true — instant saves, full offline — with the cloud as the follow-you copy. No SDK involved; plain `fetch` against Supabase auth + REST.
+**Want it on every device? Run your own backend.** [`server/server.js`](server/README.md) is a complete self-hosted sync server — one file, plain Node, SQLite via the built-in driver, zero npm installs: `node server.js` and it's up. Create an account in **Settings → Account & sync** and your workspace follows you to any device you sign in on, with honest conflict prompts when two devices diverge. Local-first stays true — instant saves, full offline — and no third party ever holds your data.
 
 ## Design notes
 

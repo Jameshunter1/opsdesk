@@ -31,11 +31,10 @@
       var accountCard = '<div class="card"><div class="card-title">Account & sync</div>';
       if (!cs.configured) {
         accountCard +=
-          '<p class="subtle">Optional: connect a free Supabase project and your data follows you to any device you sign in on. Local-only works forever without it.</p>' +
-          '<p class="hint" style="margin:8px 0 12px">Setup takes ~5 minutes — see the <a href="https://github.com/Jameshunter1/opsdesk/blob/main/docs/guide.md#use-it-on-all-your-devices-account--sync" target="_blank" rel="noopener">guide</a>, then paste the two values from Project Settings → API:</p>' +
+          '<p class="subtle">Optional: run your own sync server (one file, plain Node — see <span class="mono">server/server.js</span>) and your data follows you to any device you sign in on. Local-only works forever without it.</p>' +
+          '<p class="hint" style="margin:8px 0 12px">Start it with <span class="mono">node server.js</span>, then enter its address — the <a href="https://github.com/Jameshunter1/opsdesk/blob/main/docs/guide.md#run-your-own-sync-server" target="_blank" rel="noopener">guide</a> covers LAN, Tailscale, and locking sign-ups.</p>' +
           '<div class="stack">' +
-          '<div class="field"><label for="cloud-url">Project URL</label><input class="control" id="cloud-url" placeholder="https://xxxx.supabase.co"></div>' +
-          '<div class="field"><label for="cloud-key">Anon public key</label><input class="control" id="cloud-key" placeholder="eyJhbGciOi…"></div>' +
+          '<div class="field"><label for="cloud-url">Server address</label><input class="control" id="cloud-url" placeholder="http://192.168.2.50:8787"></div>' +
           '<div><button class="btn primary" id="cloud-save-cfg" type="button">Connect</button></div>' +
           "</div>";
       } else if (!cs.signedIn) {
@@ -51,7 +50,7 @@
           "</div>";
       } else {
         accountCard +=
-          '<p class="subtle">Signed in as <b>' + esc(cs.email) + "</b>.</p>" +
+          '<p class="subtle">Signed in as <b>' + esc(cs.email) + '</b> <span class="hint">on ' + esc(cs.serverUrl.replace(/^https?:\/\//, "")) + "</span></p>" +
           '<p class="hint" style="margin:8px 0 12px">' +
           (cs.syncing ? "Syncing…" : cs.dirty ? "Changes waiting to sync" : "Everything synced") +
           (cs.lastSync ? " · last sync " + esc(OD.fmt.dateFull(cs.lastSync)) : "") +
@@ -127,14 +126,19 @@
       var saveCfg = el.querySelector("#cloud-save-cfg");
       if (saveCfg) saveCfg.addEventListener("click", function () {
         var url = el.querySelector("#cloud-url").value.trim();
-        var key = el.querySelector("#cloud-key").value.trim();
-        if (!/^https:\/\/.+/.test(url) || key.length < 20) {
-          OD.ui.toast("That doesn't look right — check both values against Project Settings → API.", true);
+        if (!/^https?:\/\/.+/.test(url)) {
+          OD.ui.toast("Enter the full address, starting with http:// or https://", true);
           return;
         }
-        OD.cloud.saveConfig(url, key);
-        OD.app.refresh();
-        OD.ui.toast("Connected — now sign in or create your account.");
+        saveCfg.disabled = true;
+        OD.cloud.checkServer(url).then(function (h) {
+          OD.cloud.saveConfig(url);
+          OD.app.refresh();
+          OD.ui.toast("Server found" + (h.signupOpen ? " — now sign in or create your account." : " — sign-ups are closed there; sign in."));
+        }).catch(function (e) {
+          saveCfg.disabled = false;
+          OD.ui.toast(e.message, true);
+        });
       });
 
       function authCall(fn, btn) {

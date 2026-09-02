@@ -11,7 +11,7 @@ OpsDesk is a **local-first** app: everything you enter lives in your browser, on
 - [Fuel](#fuel)
 - [Study](#study)
 - [Lab](#lab)
-- [Use it on all your devices (account & sync)](#use-it-on-all-your-devices-account--sync)
+- [Run your own sync server](#run-your-own-sync-server)
 - [Backups & moving machines](#backups--moving-machines)
 - [Install it like an app](#install-it-like-an-app)
 - [FAQ](#faq)
@@ -96,19 +96,21 @@ Built for working toward more than one thing at once:
 
 Homelab inventory for the IT-inclined: VM fleet (specs, zones, IPs, status, RAM-committed counter), network zones, and a firewall policy matrix where every rule needs a one-sentence reason and unset cells read as default-deny. Not your thing? Settings → untick Lab.
 
-## Use it on all your devices (account & sync)
+## Run your own sync server
 
-Local-only is the default forever. But if you want your data to **follow you** — phone, laptop, any browser — connect a free database and sign in. OpsDesk stays local-first (instant, offline-capable); the account is a synced copy in a real Postgres database that only you can read.
+Local-only is the default forever. But if you want your data to **follow you** — phone, laptop, any browser — run the sync server yourself and sign in. No third-party cloud: the backend is **one file you run with plain Node** ([`server/server.js`](../server/README.md)), storing accounts and workspaces in a SQLite database on *your* machine. OpsDesk stays local-first (instant, offline-capable); your server holds the synced copy.
 
-**One-time setup (~5 minutes, free, no credit card):**
+**Quickstart (one minute, no installs):**
 
-1. Go to [supabase.com](https://supabase.com) → **Start your project** → sign in with GitHub → **New project** (free plan). Pick any name and a strong database password (you won't need it day-to-day).
-2. In the project: **SQL Editor** → paste the contents of [`supabase/schema.sql`](../supabase/schema.sql) from this repo → **Run**. That creates the one table plus the row-level-security rules that keep each account's data private.
-3. **Authentication → Sign In / Up → Email**: turn **off** "Confirm email" (simplest — sign-ups work instantly; leave it on if you prefer emailed confirmation links).
-4. **Project Settings → API**: copy the **Project URL** and the **anon public** key.
-5. In OpsDesk: **Settings → Account & sync** → paste both → **Connect** → **Create account** with an email and password. Done — repeat step 5 on any other device and **Sign in**.
+1. On the machine that will host it (your PC, a homelab VM):
+   ```
+   node server.js
+   ```
+   It prints the addresses it's reachable on and creates `opsdesk.db` next to itself.
+2. In OpsDesk: **Settings → Account & sync** → enter the server address → **Connect** → **Create account**. Other devices: same address, **Sign in**.
+3. When your accounts exist, restart the server with `OPSDESK_ALLOW_SIGNUP=0` to close registration.
 
-(The anon key is designed to be public — it grants nothing beyond what the security rules allow. If you commit both values into `js/cloud-config.js`, every copy of the app is pre-connected and devices only need the sign-in step.)
+One catch worth knowing: browsers won't let the **https** live site call a plain-**http** server. Either use a local copy of the app (double-click `index.html`) with an http LAN server, or give the server real HTTPS — [`server/README.md`](../server/README.md) shows the easy way (Tailscale: free, works from anywhere, no port forwarding) plus a systemd unit for running it on a Debian VM. Baking your server address into `js/cloud-config.js` pre-connects every copy of the app.
 
 **How sync behaves:**
 

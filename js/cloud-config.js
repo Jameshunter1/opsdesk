@@ -1,15 +1,14 @@
 /* OpsDesk — cloud configuration.
-   Fill these two values in after creating your free Supabase project
-   (see docs/guide.md → "Use it on all your devices") and every copy of
-   the app — live site, installed app, laptop — will offer sign-in.
+   Point this at YOUR sync server (server/server.js — one file, plain
+   Node, no installs) and every copy of the app is pre-connected, so
+   devices only need to sign in.
 
-   The publishable/anon key is designed to be public: it only grants what
-   Row Level Security allows, which is "each signed-in user sees exactly
-   their own row". Committing it here is safe and intended.
+   Leave it empty and OpsDesk is fully local; each device can also set
+   its own server address in Settings → Account (which overrides this).
 
-   Emptying both values returns OpsDesk to fully local, exactly as before.
-   Values pasted into Settings → Account override these per device. */
+   Example: url: "https://yourbox.your-tailnet.ts.net:8787"
+        or: url: "http://192.168.2.50:8787"  (LAN — use a local copy of
+            the app for plain http; the https live site can't call it) */
 window.OPSDESK_CLOUD = {
-  url: "https://ocsvbckyqtrkibrtzxwu.supabase.co",
-  anonKey: "sb_publishable_OuOXzUlxG7LRAHBTuycRJw_1tGl-yyd"
+  url: ""
 };

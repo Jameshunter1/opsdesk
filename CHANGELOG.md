@@ -2,11 +2,23 @@
 
 All notable changes to OpsDesk. Versions follow [semver](https://semver.org); the data schema is versioned separately (currently v1) and only changes when stored data would need migration.
 
-## 3.1.0 — 2026-09-02
+## 3.2.0 — 2026-09-02
+
+**Own your backend.** Supabase is gone; sync now runs against a server you host yourself.
 
 ### Added
-- **Accounts & cloud sync (optional).** Connect a free Supabase project (schema + 5-minute setup in the guide), create an account in Settings → Account & sync, and your whole workspace syncs to a Postgres row scoped to you by row-level security. Local-first is unchanged — instant saves, full offline — with debounced pushes, pull-on-open, an explicit conflict prompt when two devices diverge (never a silent merge), Sync now, and sign-out that keeps local data. Implemented with plain `fetch` (no SDK); `js/cloud-config.js` can pre-connect every copy of the app.
-- The app requests persistent storage so browsers never auto-evict local data under disk pressure.
+- `server/server.js` — a complete self-hosted sync server in one file: plain Node (v22.5+), SQLite via the built-in `node:sqlite` driver, **zero npm installs**. Accounts (scrypt-hashed passwords, hashed 30-day sliding session tokens, per-IP rate limiting), one workspace row per user, CORS for the app, optional direct HTTPS via cert/key env vars, and an `OPSDESK_ALLOW_SIGNUP=0` switch to lock registration once your accounts exist. `server/README.md` covers LAN vs HTTPS (Tailscale), Windows startup, and a systemd unit.
+- Settings → Account & sync now takes a **server address** and health-checks it on Connect.
+
+### Removed
+- All Supabase integration (config, schema, GoTrue/PostgREST client code). The sync client now speaks the self-hosted server's small JSON API — same local-first behaviour, same conflict prompts, no third party.
+
+### Verified
+- 18-case API suite (auth, validation, per-user isolation, multi-session, revocation) plus in-browser end-to-end runs: real sign-up + push from the app, and the two-device divergence prompt.
+
+## 3.1.0 — 2026-09-02 *(superseded by 3.2.0)*
+
+Introduced optional accounts & cloud sync — local-first with debounced pushes, pull-on-open, explicit conflict prompts, never a silent merge — originally backed by Supabase, replaced the same day by the self-hosted server above. Also: the app requests persistent storage so browsers never auto-evict local data under disk pressure.
 
 ## 3.0.0 — 2026-09-02
 

@@ -1,12 +1,9 @@
-/* OpsDesk — cloud sync (optional).
+/* OpsDesk — cloud sync against YOUR OWN server (server/server.js).
    Local-first stays true: localStorage is the working copy and the app
-   never waits on the network. When an account is signed in, the whole
-   workspace document syncs to a Supabase Postgres row that Row Level
-   Security scopes to that user — pull on load/login, debounced push on
-   every change, honest conflict prompts when two devices disagree.
-
-   Talks to Supabase with plain fetch (auth + PostgREST) — no SDK, in
-   keeping with the zero-dependency rule. */
+   never waits on the network. Signed in, the whole workspace document
+   syncs to your self-hosted SQLite row — pull on load/sign-in, debounced
+   push on every change, honest conflict prompts when devices disagree.
+   Plain fetch, no SDK, no third parties. */
 (function () {
   "use strict";
 
@@ -35,16 +32,14 @@
     var override = readJson(CFG_KEY);
     var base = window.OPSDESK_CLOUD || {};
     var url = ((override && override.url) || base.url || "").replace(/\/+$/, "");
-    var key = (override && override.anonKey) || base.anonKey || "";
-    return { url: url, anonKey: key };
+    return { url: url };
   };
-  cloud.saveConfig = function (url, anonKey) {
-    writeJson(CFG_KEY, { url: (url || "").trim().replace(/\/+$/, ""), anonKey: (anonKey || "").trim() });
+  cloud.saveConfig = function (url) {
+    var clean = (url || "").trim().replace(/\/+$/, "");
+    if (clean) writeJson(CFG_KEY, { url: clean });
+    else writeJson(CFG_KEY, null);
   };
-  cloud.configured = function () {
-    var c = cloud.config();
-    return !!(c.url && c.anonKey);
-  };
+  cloud.configured = function () { return !!cloud.config().url; };
 
   function session() { return readJson(SES_KEY); }
   function meta() { return readJson(META_KEY) || {}; }
@@ -57,13 +52,14 @@
   cloud.signedIn = function () { return !!session(); };
   cloud.email = function () {
     var s = session();
-    return s && s.user ? s.user.email : "";
+    return s ? s.email : "";
   };
   cloud.status = function () {
     return {
       configured: cloud.configured(),
       signedIn: cloud.signedIn(),
       email: cloud.email(),
+      serverUrl: cloud.config().url,
       lastSync: meta().lastSync || "",
       dirty: state.dirty || meta().dirty === true,
       syncing: state.syncing,
@@ -73,18 +69,14 @@
 
   /* ---------- HTTP ---------- */
 
-  function authHeaders(withUser) {
+  function http(method, path, body, withAuth) {
     var c = cloud.config();
-    var h = { apikey: c.anonKey, "Content-Type": "application/json" };
-    if (withUser) {
+    var headers = { "Content-Type": "application/json" };
+    if (withAuth) {
       var s = session();
-      if (s) h.Authorization = "Bearer " + s.access_token;
+      if (!s) return Promise.reject(new Error("Not signed in."));
+      headers.Authorization = "Bearer " + s.token;
     }
-    return h;
-  }
-
-  function http(method, path, body, headers) {
-    var c = cloud.config();
     return fetch(c.url + path, {
       method: method,
       headers: headers,
@@ -93,96 +85,69 @@
       return res.text().then(function (txt) {
         var data = null;
         try { data = txt ? JSON.parse(txt) : null; } catch (e) { /* non-JSON */ }
+        if (res.status === 401 && withAuth) {
+          writeJson(SES_KEY, null);
+          throw new Error("Session expired — sign in again.");
+        }
         if (!res.ok) {
-          var msg = (data && (data.msg || data.message || data.error_description || data.error)) || ("HTTP " + res.status);
-          var err = new Error(msg);
-          err.status = res.status;
-          throw err;
+          throw new Error((data && data.error) || ("Server said HTTP " + res.status));
         }
         return data;
       });
+    }, function () {
+      throw new Error("Can't reach the server — is it running, and are you on the right network?");
     });
   }
 
-  function storeSession(data) {
-    if (!data || !data.access_token) return null;
-    var s = {
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: Math.floor(Date.now() / 1000) + (data.expires_in || 3600) - 60,
-      user: { id: data.user && data.user.id, email: data.user && data.user.email }
-    };
-    writeJson(SES_KEY, s);
-    return s;
-  }
+  /* ---------- server + auth ---------- */
 
-  /* Refresh the access token when it's about to lapse. */
-  function freshSession() {
-    var s = session();
-    if (!s) return Promise.reject(new Error("Not signed in."));
-    if (s.expires_at > Math.floor(Date.now() / 1000)) return Promise.resolve(s);
-    return http("POST", "/auth/v1/token?grant_type=refresh_token", { refresh_token: s.refresh_token }, authHeaders(false))
-      .then(function (data) {
-        var ns = storeSession(data);
-        if (!ns) throw new Error("Session expired — sign in again.");
-        return ns;
-      })
-      .catch(function (e) {
-        writeJson(SES_KEY, null);
-        throw new Error("Session expired — sign in again.");
+  cloud.checkServer = function (url) {
+    var clean = (url || "").trim().replace(/\/+$/, "");
+    return fetch(clean + "/api/health").then(function (res) {
+      return res.json().then(function (d) {
+        if (!d || !d.ok) throw new Error("bad");
+        return d;
       });
-  }
-
-  /* ---------- auth ---------- */
+    }).catch(function () {
+      throw new Error("No OpsDesk server answered there. Check the address, that the server is running, and http vs https.");
+    });
+  };
 
   cloud.signUp = function (email, password) {
-    return http("POST", "/auth/v1/signup", { email: email, password: password }, authHeaders(false))
+    return http("POST", "/api/signup", { email: email, password: password })
       .then(function (data) {
-        if (data && data.access_token) {
-          storeSession(data);
-          return cloud.afterSignIn().then(function () { return { ok: true, needsConfirm: false }; });
-        }
-        // project has email confirmations on — account made, link sent
-        return { ok: true, needsConfirm: true };
+        writeJson(SES_KEY, { token: data.token, email: data.email, expiresAt: data.expiresAt });
+        return cloud.afterSignIn();
       });
   };
 
   cloud.signIn = function (email, password) {
-    return http("POST", "/auth/v1/token?grant_type=password", { email: email, password: password }, authHeaders(false))
+    return http("POST", "/api/signin", { email: email, password: password })
       .then(function (data) {
-        if (!storeSession(data)) throw new Error("Sign-in failed.");
+        writeJson(SES_KEY, { token: data.token, email: data.email, expiresAt: data.expiresAt });
         return cloud.afterSignIn();
       });
   };
 
   cloud.signOut = function () {
+    http("POST", "/api/signout", {}, true).catch(function () { /* best effort */ });
     writeJson(SES_KEY, null);
     writeJson(META_KEY, null);
     state.dirty = false;
     state.error = "";
   };
 
-  /* ---------- workspace row ---------- */
+  /* ---------- workspace ---------- */
 
   function fetchRemote() {
-    return freshSession().then(function () {
-      return http("GET", "/rest/v1/workspaces?select=doc,updated_at", undefined, authHeaders(true));
-    }).then(function (rows) {
-      return rows && rows.length ? rows[0] : null;
-    });
+    return http("GET", "/api/workspace", undefined, true);
   }
 
   function pushDoc() {
-    return freshSession().then(function () {
-      var h = authHeaders(true);
-      h.Prefer = "resolution=merge-duplicates,return=representation";
-      return http("POST", "/rest/v1/workspaces?on_conflict=user_id",
-        [{ doc: OD.db, updated_at: new Date().toISOString() }], h);
-    }).then(function (rows) {
-      var row = rows && rows.length ? rows[0] : null;
+    return http("PUT", "/api/workspace", { doc: OD.db }, true).then(function (data) {
       state.dirty = false;
-      setMeta({ lastSync: OD.todayISO(), remoteUpdatedAt: row ? row.updated_at : "", dirty: false });
       state.error = "";
+      setMeta({ lastSync: OD.todayISO(), remoteUpdatedAt: (data && data.updatedAt) || "", dirty: false });
     });
   }
 
@@ -212,8 +177,8 @@
       '<p class="subtle">This device and your account both have changes. Which one wins? ' +
       "The other is overwritten — if unsure, Cancel and export a backup first.</p>" +
       '<div class="stack-choices" style="margin-top:12px">' +
-      '<button class="big-choice" data-pick="cloud" type="button"><b>Use my account\'s copy</b><span>Last saved to the cloud ' + OD.ui.esc(remote.updated_at ? remote.updated_at.slice(0, 10) : "") + " — replaces what's on this device</span></button>" +
-      '<button class="big-choice" data-pick="local" type="button"><b>Keep this device\'s copy</b><span>Pushes it to your account, replacing the cloud version</span></button>' +
+      '<button class="big-choice" data-pick="cloud" type="button"><b>Use my account\'s copy</b><span>Last saved to your server ' + OD.ui.esc(remote.updatedAt ? remote.updatedAt.slice(0, 10) : "") + " — replaces what's on this device</span></button>" +
+      '<button class="big-choice" data-pick="local" type="button"><b>Keep this device\'s copy</b><span>Pushes it to your server, replacing the account version</span></button>' +
       "</div>" +
       '<div class="modal-actions"><button class="btn" data-pick="cancel" type="button">Cancel</button></div>', true
     );
@@ -222,7 +187,7 @@
         var pick = b.getAttribute("data-pick");
         OD.ui.closeModal();
         if (pick === "cloud") { applyRemote(remote.doc); OD.ui.toast("Using your account's copy."); }
-        else if (pick === "local") { pushDoc().then(function () { OD.ui.toast("This device's copy is now the cloud copy."); }).catch(fail); }
+        else if (pick === "local") { pushDoc().then(function () { OD.ui.toast("This device's copy is now the account copy."); }).catch(fail); }
       });
     });
   }
@@ -230,7 +195,7 @@
   function fail(e) {
     state.syncing = false;
     state.error = e.message || "Sync failed.";
-    OD.ui.toast("Cloud: " + state.error, true);
+    OD.ui.toast("Sync: " + state.error, true);
     if (location.hash === "#/settings") OD.app.refresh();
   }
 
@@ -240,8 +205,8 @@
     state.syncing = true;
     return fetchRemote().then(function (remote) {
       state.syncing = false;
-      if (!remote) return pushDoc().then(function () { OD.ui.toast("Account ready — this device's data is now backed by the cloud."); });
-      if (!localLooksMeaningful()) { applyRemote(remote.doc); OD.ui.toast("Pulled your data from the cloud."); return; }
+      if (!remote || !remote.doc) return pushDoc().then(function () { OD.ui.toast("Account ready — this device's data now lives on your server too."); });
+      if (!localLooksMeaningful()) { applyRemote(remote.doc); setMeta({ remoteUpdatedAt: remote.updatedAt }); OD.ui.toast("Pulled your data from your server."); return; }
       conflictPrompt(remote);
     }).catch(function (e) { fail(e); throw e; });
   };
@@ -253,14 +218,14 @@
     state.syncing = true;
     fetchRemote().then(function (remote) {
       state.syncing = false;
-      if (!remote) { if (state.dirty || localLooksMeaningful()) schedulePush(); return; }
+      if (!remote || !remote.doc) { if (state.dirty || localLooksMeaningful()) schedulePush(); return; }
       var seen = meta().remoteUpdatedAt || "";
-      var remoteNewer = remote.updated_at && remote.updated_at !== seen;
+      var remoteNewer = remote.updatedAt && remote.updatedAt !== seen;
       if (remoteNewer && state.dirty) { conflictPrompt(remote); return; }
       if (remoteNewer) {
         applyRemote(remote.doc);
-        setMeta({ remoteUpdatedAt: remote.updated_at });
-        OD.ui.toast("Synced from your account.");
+        setMeta({ remoteUpdatedAt: remote.updatedAt });
+        OD.ui.toast("Synced from your server.");
         return;
       }
       if (state.dirty) schedulePush();
