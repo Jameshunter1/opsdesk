@@ -6,6 +6,8 @@
 
 No server. No account. No build step. Open `index.html` and it runs.
 
+![OpsDesk dashboard](docs/dashboard.png)
+
 ---
 
 ## Why this exists
