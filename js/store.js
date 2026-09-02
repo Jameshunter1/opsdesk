@@ -6,7 +6,7 @@
 
   window.OD = window.OD || {};
   OD.views = OD.views || {};
-  OD.VERSION = "3.0.0";
+  OD.VERSION = "3.1.0";
 
   var KEY = "opsdesk.v1";
   var SCHEMA_VERSION = 1;
@@ -208,6 +208,7 @@
       } catch (e) {
         if (OD.ui && OD.ui.toast) OD.ui.toast("Could not save — browser storage is unavailable.", true);
       }
+      if (OD.cloud && OD.cloud.onLocalChange) OD.cloud.onLocalChange();
     },
 
     exportJson: function () {

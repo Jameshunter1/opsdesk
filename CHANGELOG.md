@@ -2,6 +2,12 @@
 
 All notable changes to OpsDesk. Versions follow [semver](https://semver.org); the data schema is versioned separately (currently v1) and only changes when stored data would need migration.
 
+## 3.1.0 — 2026-09-02
+
+### Added
+- **Accounts & cloud sync (optional).** Connect a free Supabase project (schema + 5-minute setup in the guide), create an account in Settings → Account & sync, and your whole workspace syncs to a Postgres row scoped to you by row-level security. Local-first is unchanged — instant saves, full offline — with debounced pushes, pull-on-open, an explicit conflict prompt when two devices diverge (never a silent merge), Sync now, and sign-out that keeps local data. Implemented with plain `fetch` (no SDK); `js/cloud-config.js` can pre-connect every copy of the app.
+- The app requests persistent storage so browsers never auto-evict local data under disk pressure.
+
 ## 3.0.0 — 2026-09-02
 
 **The slim-down.** Nine tabs was too much to track; five is the point. Breaking release: two modules removed outright.

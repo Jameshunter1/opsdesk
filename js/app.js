@@ -117,5 +117,8 @@
     if (navigator.storage && navigator.storage.persist) {
       navigator.storage.persist().catch(function () { /* best effort */ });
     }
+
+    // cloud sync: if an account is signed in, pick up other devices' changes
+    OD.cloud.init();
   });
 })();

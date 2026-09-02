@@ -11,6 +11,7 @@ OpsDesk is a **local-first** app: everything you enter lives in your browser, on
 - [Fuel](#fuel)
 - [Study](#study)
 - [Lab](#lab)
+- [Use it on all your devices (account & sync)](#use-it-on-all-your-devices-account--sync)
 - [Backups & moving machines](#backups--moving-machines)
 - [Install it like an app](#install-it-like-an-app)
 - [FAQ](#faq)
@@ -94,6 +95,27 @@ Built for working toward more than one thing at once:
 ## Lab
 
 Homelab inventory for the IT-inclined: VM fleet (specs, zones, IPs, status, RAM-committed counter), network zones, and a firewall policy matrix where every rule needs a one-sentence reason and unset cells read as default-deny. Not your thing? Settings → untick Lab.
+
+## Use it on all your devices (account & sync)
+
+Local-only is the default forever. But if you want your data to **follow you** — phone, laptop, any browser — connect a free database and sign in. OpsDesk stays local-first (instant, offline-capable); the account is a synced copy in a real Postgres database that only you can read.
+
+**One-time setup (~5 minutes, free, no credit card):**
+
+1. Go to [supabase.com](https://supabase.com) → **Start your project** → sign in with GitHub → **New project** (free plan). Pick any name and a strong database password (you won't need it day-to-day).
+2. In the project: **SQL Editor** → paste the contents of [`supabase/schema.sql`](../supabase/schema.sql) from this repo → **Run**. That creates the one table plus the row-level-security rules that keep each account's data private.
+3. **Authentication → Sign In / Up → Email**: turn **off** "Confirm email" (simplest — sign-ups work instantly; leave it on if you prefer emailed confirmation links).
+4. **Project Settings → API**: copy the **Project URL** and the **anon public** key.
+5. In OpsDesk: **Settings → Account & sync** → paste both → **Connect** → **Create account** with an email and password. Done — repeat step 5 on any other device and **Sign in**.
+
+(The anon key is designed to be public — it grants nothing beyond what the security rules allow. If you commit both values into `js/cloud-config.js`, every copy of the app is pre-connected and devices only need the sign-in step.)
+
+**How sync behaves:**
+
+- Every change saves locally first (instant), then pushes to your account a couple of seconds later. Opening the app pulls anything a another device pushed.
+- Offline? Everything still works; changes push when you're back online. **Sync now** in Settings forces it.
+- If two devices genuinely diverge, OpsDesk shows both versions and asks which wins — it never silently merges or discards.
+- **Sign out** stops syncing but keeps the device's data. Backups (export/import) work exactly the same with or without an account.
 
 ## Backups & moving machines
 

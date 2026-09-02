@@ -65,7 +65,9 @@ Then: make a food plan (Fuel), set a routine (Training), set a study target (Stu
 
 ## Your data
 
-Everything lives in your browser's `localStorage` — nothing ever leaves your machine (the page is static files; check the network tab). **Settings → Export backup** produces one JSON file with your whole world; import restores it. Export before clearing browser data or switching machines.
+Everything lives in your browser's `localStorage` — by default nothing ever leaves your machine (the page is static files; check the network tab). **Settings → Export backup** produces one JSON file with your whole world; import restores it.
+
+**Want it on every device?** Connect a free Supabase project (5-minute setup, [guide here](docs/guide.md#use-it-on-all-your-devices-account--sync)) and create an account in **Settings → Account & sync**: your workspace syncs to a Postgres row that row-level security scopes to you alone. Local-first stays true — instant saves, full offline — with the cloud as the follow-you copy. No SDK involved; plain `fetch` against Supabase auth + REST.
 
 ## Design notes
 
