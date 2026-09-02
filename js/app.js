@@ -111,5 +111,11 @@
     if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
       navigator.serviceWorker.register("sw.js").catch(function () { /* offline support is optional */ });
     }
+
+    // ask the browser to never auto-evict this site's data under disk
+    // pressure — deliberate user clearing is then the only way it goes
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(function () { /* best effort */ });
+    }
   });
 })();

@@ -98,7 +98,9 @@ Homelab inventory for the IT-inclined: VM fleet (specs, zones, IPs, status, RAM-
 ## Backups & moving machines
 
 - **Settings → Export backup** downloads the entire workspace as one JSON file; **Import backup** restores it. Settings shows **when you last backed up** — glance at it now and then.
-- Export before clearing browser data (that's the one way to lose localStorage), before switching browsers or computers, and after any big data-entry session.
+- **"Clearing the cache" does not delete your data.** The cache holds copies of the app's files; your entries live in *site data* (localStorage). What deletes them: running *Clear browsing data* with **"cookies and other site data"** ticked, clearing site data for this site specifically, PC-cleaner tools that wipe browser data, or ticking "also delete data" when uninstalling the installed app. Private/incognito windows discard everything on close — don't log there.
+- The app also asks the browser for **persistent storage** on load, so it's never auto-evicted under disk pressure — deliberate clearing is the only way it goes.
+- Export before any of the above, before switching browsers or computers, and after any big data-entry session.
 - Two devices? No live sync by design (sync means servers and accounts). Export on one, import on the other.
 - If your workspace predates v3 and had Money or Job-hunt entries, they're preserved invisibly in an `archive` section of the document — they travel with your backups, and deleting that section from an exported file (or starting blank) purges them for good.
 
