@@ -1,3 +1,9 @@
+# server data — real accounts live here, never commit
+server/opsdesk.db
+server/opsdesk.db-*
+server/*.crt
+server/*.key
+
 # OS noise
 Thumbs.db
 desktop.ini

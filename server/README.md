@@ -8,7 +8,9 @@ Your own backend: one file, plain Node (v22.5+), a real SQLite database via Node
 node server.js
 ```
 
-That's the deployment. It prints the addresses it's reachable on; the database appears as `opsdesk.db` next to the script. Back that one file up and you've backed up every account.
+On Windows, just double-click **`start-server.bat`**. Either way it prints the addresses it's reachable on; the database appears as `opsdesk.db` next to the script (git-ignored — back that one file up and you've backed up every account).
+
+**It does not need to be always-on.** OpsDesk is local-first: devices work fully offline and sync whenever the server happens to be up. Running it on your everyday PC while you use your machines is a perfectly good deployment; a lab VM that's usually powered off is not (labs are for practice, not for holding your real data's sync point). If you later want 24/7, move the two files to a Pi, a spare box, or a small cloud VM.
 
 ## Point the app at it
 
